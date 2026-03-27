@@ -15,18 +15,18 @@ const { showNotification } = useNotification();
 
 // ─── Modal hủy đơn ────────────────────────────────────────────────────────────
 const showCancelModal = ref(false);
-const orderToCancel = ref<string | null>(null);
+const orderToCancel   = ref<string | null>(null);
 const cancellingOrder = ref(false);
 
-// ─── Lọc theo trạng thái ──────────────────────────────────────────────────────
+// ─── Filter tabs ──────────────────────────────────────────────────────────────
 const activeStatus = ref("all");
 const statusTabs = [
-  { label: "Tất cả",         value: "all" },
-  { label: "Chờ xác nhận",  value: "pending" },
-  { label: "Đã xác nhận",   value: "confirmed" },
-  { label: "Đang giao",     value: "shipping" },
-  { label: "Đã giao",       value: "completed" },
-  { label: "Đã hủy",        value: "cancelled" },
+  { label: "Tất cả",        value: "all" },
+  { label: "Chờ xác nhận", value: "pending" },
+  { label: "Đã xác nhận",  value: "confirmed" },
+  { label: "Đang giao",    value: "shipping" },
+  { label: "Đã giao",      value: "completed" },
+  { label: "Đã hủy",       value: "cancelled" },
 ];
 
 const filteredOrders = computed(() => {
@@ -36,20 +36,18 @@ const filteredOrders = computed(() => {
   );
 });
 
-// ─── Lifecycle ────────────────────────────────────────────────────────────────
+
 onMounted(async () => {
-  if (!isAuthenticated.value) {
-    navigateTo("/auth/login");
-    return;
-  }
+
+
   if (user.value?.userId) {
     await fetchUserOrders(user.value.userId);
   }
 });
 
-// ─── Hủy đơn hàng ────────────────────────────────────────────────────────────
+
 const handleCancelOrder = (orderId: string) => {
-  orderToCancel.value = orderId;
+  orderToCancel.value  = orderId;
   showCancelModal.value = true;
 };
 
@@ -60,7 +58,7 @@ const confirmCancelOrder = async () => {
     await cancelOrder(orderToCancel.value);
     showNotification("Thành công", "Đã hủy đơn hàng thành công.", "success");
     showCancelModal.value = false;
-    orderToCancel.value = null;
+    orderToCancel.value   = null;
   } catch {
     showNotification("Lỗi", "Không thể hủy đơn hàng. Vui lòng thử lại.", "error");
   } finally {
@@ -68,21 +66,25 @@ const confirmCancelOrder = async () => {
   }
 };
 
-// ─── Thanh toán (Banking) ─────────────────────────────────────────────────────
-// Nếu dự án có VNPay hoặc cổng thanh toán khác, gọi ở đây.
-// Hiện tại chỉ cập nhật paymentStatus = "paid" trực tiếp (demo).
+// ─── Thanh toán ───────────────────────────────────────────────────────────────
 const paying = ref(false);
 
 const handlePayNow = async (order: Order) => {
   paying.value = true;
   try {
-    // TODO: tích hợp cổng thanh toán thực tế
-    // Ví dụ: await createVnpayPayment({ orderId: order.id })
+    // TODO: tích hợp cổng thanh toán (VNPay, Stripe, …)
     showNotification("Thông báo", "Tính năng thanh toán online đang được tích hợp.", "info");
   } catch (err: any) {
     showNotification("Lỗi", err.message || "Không thể tiến hành thanh toán.", "error");
   } finally {
     paying.value = false;
+  }
+};
+
+// ─── Retry ────────────────────────────────────────────────────────────────────
+const handleRetry = async () => {
+  if (user.value?.userId) {
+    await fetchUserOrders(user.value.userId);
   }
 };
 </script>
@@ -103,7 +105,7 @@ const handlePayNow = async (order: Order) => {
         </NuxtLink>
       </div>
 
-      <!-- Tabs trạng thái -->
+      <!-- Tabs -->
       <OrderStatusTabs
         v-model:activeStatus="activeStatus"
         :statusTabs="statusTabs"
@@ -129,7 +131,7 @@ const handlePayNow = async (order: Order) => {
         <h3 class="text-xl font-bold text-gray-900 mb-2">Đã có lỗi xảy ra</h3>
         <p class="text-gray-600 mb-6">{{ error }}</p>
         <button
-          @click="user?.userId && fetchUserOrders(user.userId)"
+          @click="handleRetry"
           class="px-6 py-2 bg-glow-primary-600 text-white rounded-lg hover:bg-glow-primary-700 transition-colors"
         >
           Thử lại
@@ -168,7 +170,7 @@ const handlePayNow = async (order: Order) => {
         </button>
       </div>
 
-      <!-- Danh sách đơn hàng -->
+      <!-- Danh sách -->
       <div v-else class="space-y-6">
         <OrderHistoryCard
           v-for="order in filteredOrders"

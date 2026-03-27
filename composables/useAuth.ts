@@ -24,6 +24,8 @@ export const useAuth = () => {
   const isAuthenticated = computed(() => !!token.value && !!user.value);
   const getUserId = computed(() => user.value?.userId ?? null);
 
+
+  
   //SIGNUP
   const signup = async (data: {
     full_name: string;

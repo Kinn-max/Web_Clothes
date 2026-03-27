@@ -20,7 +20,6 @@ export const useOrder = () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  /** Chuyển Firestore Timestamp → chuỗi ISO để hiển thị */
   const normalizeOrder = (id: string, data: any): Order => ({
     ...data,
     id,
@@ -30,8 +29,8 @@ export const useOrder = () => {
         : data.createdAt ?? new Date().toISOString(),
   });
 
-  /** Lấy tất cả đơn hàng của một user */
-  const fetchUserOrders = async (userId: string) => {
+  // user
+ const fetchUserOrders = async (userId: string) => {
     loading.value = true;
     error.value = null;
     try {
@@ -44,6 +43,17 @@ export const useOrder = () => {
       orders.value = snap.docs.map((d) => normalizeOrder(d.id, d.data()));
       return orders.value;
     } catch (err: any) {
+      if (err?.code === "failed-precondition") {
+        const q2 = query(
+          collection(db, "orders"),
+          where("userId", "==", userId)
+        );
+        const snap2 = await getDocs(q2);
+        orders.value = snap2.docs
+          .map((d) => normalizeOrder(d.id, d.data()))
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        return orders.value;
+      }
       console.error("[useOrder] fetchUserOrders:", err);
       error.value = "Có lỗi xảy ra khi tải danh sách đơn hàng.";
       return null;
@@ -52,7 +62,7 @@ export const useOrder = () => {
     }
   };
 
-  /** Lấy tất cả đơn hàng (admin) */
+  // admin 
   const fetchAllOrders = async () => {
     loading.value = true;
     error.value = null;
@@ -73,13 +83,12 @@ export const useOrder = () => {
     }
   };
 
-  /** Hủy đơn hàng: chỉ cập nhật status = "cancelled" */
+
   const cancelOrder = async (orderId: string) => {
     loading.value = true;
     error.value = null;
     try {
       await updateDoc(doc(db, "orders", orderId), { status: "cancelled" });
-      // Cập nhật local state ngay lập tức
       const idx = orders.value.findIndex((o) => o.id === orderId);
       if (idx !== -1) orders.value[idx].status = "cancelled";
     } catch (err: any) {
@@ -91,7 +100,6 @@ export const useOrder = () => {
     }
   };
 
-  /** Cập nhật trạng thái đơn hàng (admin) */
   const updateOrderStatus = async (orderId: string, status: Order["status"]) => {
     loading.value = true;
     error.value = null;

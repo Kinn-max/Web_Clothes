@@ -28,7 +28,7 @@ const addingToCart = ref(false);
 
 const IMAGE_BASE_URL = "http://localhost:8081/uploads/products";
 
-// Mock data cho reviews
+
 const mockReviews = [
   {
     id: 1,
@@ -62,7 +62,7 @@ const newReview = ref({
   content: "",
 });
 
-// Event handlers
+
 const handleAddToCart = async () => {
   if (!isAuthenticated.value) {
     navigateTo("/auth/login");
@@ -98,7 +98,7 @@ const handleSubmitReview = () => {
   showNotification("Cảm ơn", "Đánh giá của bạn đã được ghi nhận!", "success");
 };
 
-// Load product và related products
+
 const loadProductData = async () => {
   try {
     loading.value = true;
@@ -136,29 +136,26 @@ const loadRelatedProducts = async () => {
     
   } catch (error) {
     console.error("Error loading related products:", error);
-    // Không hiển thị notification cho lỗi này vì không quan trọng
+
   } finally {
     loadingRelated.value = false;
   }
 };
 
-// Mounted
+
 onMounted(async () => {
   await loadProductData();
   await loadRelatedProducts();
 });
 
-// Watch route changes (khi user click vào related product)
+
 watch(() => route.params.id, async (newId) => {
   if (newId) {
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Reset state
     quantity.value = 1;
     selectedImage.value = "";
     
-    // Reload data
     await loadProductData();
     await loadRelatedProducts();
   }
