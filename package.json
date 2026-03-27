@@ -1,0 +1,40 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@left4code/tw-starter": "^3.1.35",
+    "@nuxtjs/tailwindcss": "6.14.0",
+    "@pinia/nuxt": "^0.1.9",
+    "@vueuse/core": "^14.2.0",
+    "@vueuse/nuxt": "8.4.2",
+    "chart.js": "^4.4.4",
+    "firebase": "^12.11.0",
+    "leaflet": "^1.9.4",
+    "lucide": "^0.86.0",
+    "lucide-vue-next": "^0.438.0",
+    "nuxt": "^3.17.7",
+    "pinia": "^2.0.14",
+    "pinia-plugin-persistedstate": "^2.1.1",
+    "vue": "^3.5.17",
+    "vue-chartjs": "^5.3.1",
+    "vue-router": "^4.5.1",
+    "vue3-toastify": "^0.2.8",
+    "vuefire": "^3.0.0"
+  },
+  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610",
+  "devDependencies": {
+    "@types/leaflet": "^1.9.21",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "sass-embedded": "^1.89.2",
+    "tailwindcss": "^3.4.17"
+  }
+}
