@@ -43,6 +43,7 @@ const navLinks = [
   { name: "Liên Hệ", path: "/contact" },
   { name: "Xem đơn hàng", path: "/order/view_order" },
   { name: "Phân tích da mặt", path: "/acne" },
+  { name: "Phòng thử đồ ảo", path: "/fitting-room" },
 ];
 
 const goToCart = () => {
