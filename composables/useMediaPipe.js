@@ -1,13 +1,17 @@
 /**
- * useMediaPipe – Init PoseLandmarker, detectForVideo.
- * Tries full model first, falls back to lite on failure.
+ * useMediaPipe – Init PoseLandmarker + FaceLandmarker, detectForVideo.
+ * PoseLandmarker: tries full model first, falls back to lite on failure.
+ * FaceLandmarker: detects whether a face is visible (dùng để xác định quay lưng/quay mặt).
  */
 export function useMediaPipe() {
   let poseLandmarker = null
-  let lastVideoTime  = -1
+  let faceLandmarker = null
+  let lastPoseTime   = -1
+  let lastFaceTime   = -1
 
   const MODEL_FULL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task'
   const MODEL_LITE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+  const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 
   /**
    * @param {object} cbs - { onStatus({ text, pct }) }
@@ -15,12 +19,13 @@ export function useMediaPipe() {
   async function initMediaPipe({ onStatus } = {}) {
     onStatus?.({ text: 'Đang load AI pose model...', pct: 65 })
 
-    const { PoseLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
+    const { PoseLandmarker, FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
 
     const vision = await FilesetResolver.forVisionTasks(
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
     )
 
+    // ── PoseLandmarker ────────────────────────────────────────────────────
     try {
       onStatus?.({ text: 'Load pose_landmarker_full...', pct: 70 })
       poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
@@ -39,19 +44,34 @@ export function useMediaPipe() {
         numPoses: 1,
       })
     }
+
+    // ── FaceLandmarker (xác định quay lưng / quay mặt) ───────────────────
+    try {
+      onStatus?.({ text: 'Load face landmarker...', pct: 85 })
+      faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: FACE_MODEL, delegate: 'GPU' },
+        runningMode: 'VIDEO',
+        numFaces: 1,
+        minFaceDetectionConfidence: 0.5,
+        minFacePresenceConfidence:  0.5,
+        minTrackingConfidence:      0.5,
+      })
+    } catch (e) {
+      console.warn('FaceLandmarker init thất bại (back-facing detection bị tắt):', e)
+    }
   }
 
   /**
-   * Run detection on the current video frame.
+   * Run pose detection on the current video frame.
    * Returns result or null if video not ready / same frame.
    * @param {HTMLVideoElement} video
    * @returns {object|null}
    */
   function detectForVideo(video) {
-    if (!poseLandmarker || video.readyState < 2) return null
+    if (!poseLandmarker || !video || video.readyState < 2) return null
     const now = video.currentTime
-    if (now === lastVideoTime) return null
-    lastVideoTime = now
+    if (now === lastPoseTime) return null
+    lastPoseTime = now
     try {
       return poseLandmarker.detectForVideo(video, performance.now())
     } catch {
@@ -59,9 +79,28 @@ export function useMediaPipe() {
     }
   }
 
-  function close() {
-    poseLandmarker?.close()
+  /**
+   * Chạy face detection trên frame video hiện tại.
+   * @param {HTMLVideoElement} video
+   * @returns {boolean|null} true = thấy mặt, false = không thấy mặt, null = chưa sẵn sàng
+   */
+  function detectFaceForVideo(video) {
+    if (!faceLandmarker || !video || video.readyState < 2) return null
+    const now = video.currentTime
+    if (now === lastFaceTime) return null
+    lastFaceTime = now
+    try {
+      const result = faceLandmarker.detectForVideo(video, performance.now())
+      return result?.faceLandmarks?.length > 0
+    } catch {
+      return null
+    }
   }
 
-  return { initMediaPipe, detectForVideo, close }
+  function close() {
+    poseLandmarker?.close()
+    faceLandmarker?.close()
+  }
+
+  return { initMediaPipe, detectForVideo, detectFaceForVideo, close }
 }

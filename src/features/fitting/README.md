@@ -8,7 +8,7 @@ AR-style virtual try-on powered by Three.js + MediaPipe PoseLandmarker.
 
 ```
 pages/
-└── fitting-room.vue          # Entry point – template + composable wiring (<100 lines)
+└── fitting-room.vue          # Entry point – template + composable wiring 
 
 composables/
 ├── useThreeScene.js          # Three.js scene, camera, renderer, lights

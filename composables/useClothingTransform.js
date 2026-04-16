@@ -5,9 +5,9 @@ const POS_LERP   = 0.18
 const SCALE_LERP = 0.15
 const ROT_LERP   = 0.12
 
-// Back-facing hysteresis thresholds
-const BACK_ENTER_TH = 0.25   // enter back-mode when avgVis < 0.25
-const BACK_EXIT_TH  = 0.45   // exit  back-mode when avgVis > 0.45
+// Face detection debounce: cần N frame liên tiếp để chuyển trạng thái
+const FACE_DEBOUNCE_ENTER = 8   // 8 frame không thấy mặt → vào back-mode
+const FACE_DEBOUNCE_EXIT  = 6   // 6 frame thấy mặt      → thoát back-mode
 
 // Skirt spring physics constants
 const SPRING_K = 0.08
@@ -30,9 +30,11 @@ export function useClothingTransform({ scaleX, scaleY, offsetY, sleeveStrength }
   let smoothRotZ  = 0
   let smoothRotY  = 0
 
-  // Back-facing state with hysteresis
-  let isFacingBack   = false
-  let prevFacingBack = false
+  // Back-facing state (điều khiển bởi Face Landmarker)
+  let isFacingBack          = false
+  let prevFacingBack        = false
+  let faceNotDetectedFrames = 0   // đếm frame liên tiếp KHÔNG thấy mặt
+  let faceDetectedFrames    = 0   // đếm frame liên tiếp THẤY mặt
 
   // Skirt spring state
   let skirtVelX    = 0
@@ -49,6 +51,7 @@ export function useClothingTransform({ scaleX, scaleY, offsetY, sleeveStrength }
    *   clothingBack  - THREE.Group (back mesh from useGLBModel)
    *   modelHeight   - number
    *   landmarks     - MediaPipe PoseLandmarker landmarks array
+   *   faceDetected  - boolean|null từ FaceLandmarker (true=thấy mặt, false=không thấy, null=skip)
    *   deformArms    - function from useArmDeform
    *   meshDataFront - array from useGLBModel.getMeshDataFront()
    *   meshDataBack  - array from useGLBModel.getMeshDataBack()
@@ -58,11 +61,11 @@ export function useClothingTransform({ scaleX, scaleY, offsetY, sleeveStrength }
   function updateClothing({
     THREE, clothingFront, clothingBack,
     modelHeight, landmarks,
+    faceDetected,
     deformArms, meshDataFront, meshDataBack,
     onStatus, onConfidence,
   }) {
     if (!clothingFront || !clothingBack) return
-
     const lShoul = lmToWorld(landmarks[11], THREE)
     const rShoul = lmToWorld(landmarks[12], THREE)
     const lHip   = lmToWorld(landmarks[23], THREE)
@@ -72,16 +75,33 @@ export function useClothingTransform({ scaleX, scaleY, offsetY, sleeveStrength }
     const lWrist = lmToWorld(landmarks[15], THREE)
     const rWrist = lmToWorld(landmarks[16], THREE)
 
-    const conf = avgVisibility(landmarks, [11, 12, 23, 24])
+    // ── Khai báo visibility TRƯỚC khi dùng ──────────────────────────────
+    const lShoulVis = landmarks[11]?.visibility ?? 0
+    const rShoulVis = landmarks[12]?.visibility ?? 0
+    const lHipVis   = landmarks[23]?.visibility ?? 0
+    const rHipVis   = landmarks[24]?.visibility ?? 0
+    const conf      = avgVisibility(landmarks, [11, 12, 23, 24])
     onConfidence?.(conf)
 
-    if (conf < 0.35) {
+    // ── DEBUG LOG ────────────────────────────────────────────────────────
+    console.log(
+      `%c${isFacingBack ? '↩ LƯNG' : '✓ MẶT'}`,
+      `background:${isFacingBack ? '#ef4444' : '#22c55e'};color:white;padding:2px 6px;border-radius:4px`,
+      {
+        conf:              conf.toFixed(3),
+        faceDetected,
+        faceDetectedF:     faceDetectedFrames,
+        faceNotDetectedF:  faceNotDetectedFrames,
+      }
+    )
+    // ────────────────────────────────────────────────────────────────────
+
+    if (conf < 0.15) {   // hạ từ 0.35 → 0.15 để không ẩn áo khi xoay lưng
       clothingFront.visible = false
       clothingBack.visible  = false
       onStatus?.('ready', 'Không thấy rõ – hãy đứng thẳng vào khung')
       return
     }
-
     // ── Compute target transform ─────────────────────────────────────────
     const shoulderMid   = new THREE.Vector3().addVectors(lShoul, rShoul).multiplyScalar(0.5)
     const hipMid        = new THREE.Vector3().addVectors(lHip, rHip).multiplyScalar(0.5)
@@ -120,11 +140,24 @@ export function useClothingTransform({ scaleX, scaleY, offsetY, sleeveStrength }
       smoothRotY += (targetRotY - smoothRotY) * ROT_LERP
     }
 
-    // ── Back-facing detection with hysteresis ────────────────────────────
-    if (!isFacingBack && conf < BACK_ENTER_TH) {
-      isFacingBack = true
-    } else if (isFacingBack && conf > BACK_EXIT_TH) {
-      isFacingBack = false
+    // ── Back-facing detection via Face Landmarker ─────────────────────────
+    // faceDetected === true  → thấy mặt = đứng thẳng
+    // faceDetected === false → không thấy mặt = quay lưng
+    // faceDetected === null  → frame bị skip, giữ nguyên trạng thái
+    if (faceDetected === false) {
+      faceNotDetectedFrames++
+      faceDetectedFrames = 0
+    } else if (faceDetected === true) {
+      faceDetectedFrames++
+      faceNotDetectedFrames = 0
+    }
+    // Cần N frame liên tiếp để chuyển trạng thái (tránh nhấp nháy)
+    if (!isFacingBack && faceNotDetectedFrames >= FACE_DEBOUNCE_ENTER) {
+      isFacingBack          = true
+      faceNotDetectedFrames = 0
+    } else if (isFacingBack && faceDetectedFrames >= FACE_DEBOUNCE_EXIT) {
+      isFacingBack       = false
+      faceDetectedFrames = 0
     }
     if (isFacingBack !== prevFacingBack) {
       // SNAP: reset rotY so there's no lerp animation across the flip
@@ -147,7 +180,7 @@ export function useClothingTransform({ scaleX, scaleY, offsetY, sleeveStrength }
     if (isFacingBack) {
       // SNAP to 180° Y → back faces now face the camera.
       // FrontSide culling on clothingBack meshes will correctly render them.
-      activeGroup.rotation.set(0, Math.PI, smoothRotZ)
+      activeGroup.rotation.set(0, 0, 0)
     } else {
       // Quaternion compose: qZ (shoulder tilt) × qY (body turn depth)
       const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), smoothRotY)

@@ -113,8 +113,12 @@ function renderLoop(ts) {
   animFrameId = requestAnimationFrame(renderLoop)
   fpsFrames++
   if (ts - fpsTimer >= 1000) { fps.value = fpsFrames; fpsFrames = 0; fpsTimer = ts }
-
-  const result = mediaPipe.detectForVideo(videoEl.value)
+  if (!videoEl.value || videoEl.value.readyState < 2) {
+    threeScene.render()
+    return
+  }
+  const result      = mediaPipe.detectForVideo(videoEl.value)
+  const faceDetected = mediaPipe.detectFaceForVideo(videoEl.value)
   if (result?.landmarks?.length > 0) {
     updateClothing({
       THREE:         threeScene.getThree(),
@@ -122,6 +126,7 @@ function renderLoop(ts) {
       clothingBack:  glbModel.getClothingBack(),
       modelHeight:   glbModel.getModelHeight(),
       landmarks:     result.landmarks[0],
+      faceDetected,
       deformArms,
       meshDataFront: glbModel.getMeshDataFront(),
       meshDataBack:  glbModel.getMeshDataBack(),

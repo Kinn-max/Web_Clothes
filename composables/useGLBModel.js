@@ -89,9 +89,22 @@ export function useGLBModel() {
 
       const mats = Array.isArray(node.material) ? node.material : [node.material]
 
-      // Clone geometry independently so front/back can be deformed separately
-      const geoF = geo.clone()
-      const geoB = geo.clone()
+ const geoF = geo.clone()
+  const geoB = geo.clone()
+
+  // Đảo normal geoB: flip thứ tự index mỗi triangle
+  const indexB = geoB.index
+  if (indexB) {
+    const arr = indexB.array
+    for (let i = 0; i < arr.length; i += 3) {
+      // Swap vertex 1 và 2 của mỗi triangle → flip normal
+      const tmp = arr[i + 1]
+      arr[i + 1] = arr[i + 2]
+      arr[i + 2] = tmp
+    }
+    indexB.needsUpdate = true
+  }
+  geoB.computeVertexNormals()
 
       // FrontSide culling: each group shows only outward-facing triangles.
       // clothingBack will have rotation.y = Math.PI applied by useClothingTransform,
