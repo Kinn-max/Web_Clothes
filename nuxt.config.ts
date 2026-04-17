@@ -6,6 +6,9 @@ export default defineNuxtConfig({
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL,
       assetBaseUrl: process.env.NUXT_PUBLIC_ASSET_BASE_URL,
+      cloudinaryCloudName: process.env.NUXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+      cloudinaryUploadPreset: process.env.NUXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
+      cloudinaryApiUrl: process.env.NUXT_PUBLIC_CLOUDINARY_API_URL,
     },
   },
 

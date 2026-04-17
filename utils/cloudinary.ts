@@ -1,6 +1,9 @@
 export const uploadToCloudinary = async (file: File) => {
-  const CLOUD_NAME = "dziuocdnw"; 
-  const UPLOAD_PRESET = "luanvan"; 
+  const { public: config } = useRuntimeConfig();
+
+  const CLOUD_NAME = config.cloudinaryCloudName as string;
+  const UPLOAD_PRESET = config.cloudinaryUploadPreset as string;
+  const API_URL = config.cloudinaryApiUrl as string;
 
   const formData = new FormData();
   formData.append("file", file);
@@ -8,17 +11,18 @@ export const uploadToCloudinary = async (file: File) => {
 
   try {
     const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, 
+      `${API_URL}/${CLOUD_NAME}/image/upload`,
       {
         method: "POST",
         body: formData,
       }
     );
+
     const data = await res.json();
 
     return {
-      url: data.secure_url,     // link ảnh
-      public_id: data.public_id // dùng để xóa ảnh
+      url: data.secure_url,
+      public_id: data.public_id,
     };
   } catch (error) {
     console.error("Upload Cloudinary error:", error);
