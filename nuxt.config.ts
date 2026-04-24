@@ -9,6 +9,7 @@ export default defineNuxtConfig({
       cloudinaryCloudName: process.env.NUXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
       cloudinaryUploadPreset: process.env.NUXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
       cloudinaryApiUrl: process.env.NUXT_PUBLIC_CLOUDINARY_API_URL,
+      catvtonUrl: process.env.NUXT_PUBLIC_CATVTON_URL,
     },
   },
 
