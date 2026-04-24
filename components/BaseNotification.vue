@@ -6,7 +6,7 @@ import {
   Info, 
   X 
 } from "lucide-vue-next";
-import { useNotification } from "~/composables/useNotification";
+import { useNotification } from "@/composables/useNotification";
 
 const { notificationState, hideNotification } = useNotification();
 
