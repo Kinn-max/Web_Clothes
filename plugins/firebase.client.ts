@@ -1,62 +1,69 @@
+// plugins/firebase.client.ts
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc} from "firebase/firestore";
-import { getStorage} from "firebase/storage";
-export default defineNuxtPlugin(() => {
-const firebaseConfig = {
-  apiKey: "AIzaSyDCiQVnqUNCy4k5DiCIMq9_6p-YrdVF0WQ",
-  authDomain: "luanvan-edc3a.firebaseapp.com",
-  projectId: "luanvan-edc3a",
-  storageBucket: "luanvan-edc3a.firebasestorage.app",
-  messagingSenderId: "888774652181",
-  appId: "1:888774652181:web:e645911e92eb111f15791c",
-  measurementId: "G-WTWPMZDDMP"
-};
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import type { User } from "firebase/auth";
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+export default defineNuxtPlugin(async () => {
+  const config = useRuntimeConfig()
 
-  const token = useState<string | null>("auth_token", () => null);
-  const user = useState<any>("auth_user", () => null);
-  const isReady = useState<boolean>("auth_ready", () => false);
-  const storage = getStorage(app); 
-  onAuthStateChanged(auth, async (firebaseUser) => {
-    if (firebaseUser) {
-      const idToken = await firebaseUser.getIdToken();
-      token.value = idToken;
+  const firebaseConfig = {
+  apiKey: config.public.firebaseApiKey as string,
+  authDomain: config.public.firebaseAuthDomain as string,
+  projectId: config.public.firebaseProjectId as string,
+  storageBucket: config.public.firebaseStorageBucket as string,
+  messagingSenderId: config.public.firebaseMessagingSenderId as string,
+  appId: config.public.firebaseAppId as string,
+  measurementId: config.public.firebaseMeasurementId as string,
+}
+  const app = initializeApp(firebaseConfig)
+  const auth = getAuth(app)
+  const db = getFirestore(app)
+  const storage = getStorage(app)
 
-  
-      const userRef = doc(db, "users", firebaseUser.uid);
-      const userSnap = await getDoc(userRef);
+  const token = useState<string | null>("auth_token", () => null)
+  const user = useState<any>("auth_user", () => null)
+  const isReady = useState<boolean>("auth_ready", () => false)
 
-      if (userSnap.exists()) {
-        user.value = {
-          userId: firebaseUser.uid,
-          ...userSnap.data(),
-        };
+  // Restore auth state khi refresh - chờ Firebase xong mới render
+  await new Promise<void>((resolve) => {
+    onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+      if (firebaseUser) {
+        const idToken = await firebaseUser.getIdToken()
+        token.value = idToken
+        localStorage.setItem("token", idToken)
+
+        const userSnap = await getDoc(doc(db, "users", firebaseUser.uid))
+        if (userSnap.exists()) {
+          user.value = {
+            userId: firebaseUser.uid,
+            ...userSnap.data(),
+          }
+        } else {
+          user.value = {
+            userId: firebaseUser.uid,
+            email: firebaseUser.email,
+            full_name: firebaseUser.displayName ?? "",
+            role: "USER",
+          }
+        }
       } else {
-       
-        user.value = {
-          userId: firebaseUser.uid,
-          email: firebaseUser.email,
-          full_name: firebaseUser.displayName ?? "",
-          role: "USER",
-        };
+        token.value = null
+        user.value = null
+        localStorage.removeItem("token")
       }
-    } else {
-      token.value = null;
-      user.value = null;
-    }
 
-    isReady.value = true;
-  });
+      isReady.value = true
+      resolve()
+    })
+  })
 
   return {
     provide: {
       auth,
       db,
-       storage,
+      storage,
     },
-  };
-});
+  }
+})
