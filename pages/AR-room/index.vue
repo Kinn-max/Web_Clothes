@@ -48,6 +48,67 @@
       <div v-if="flashVisible" class="absolute inset-0 z-30 bg-white pointer-events-none" />
     </Transition>
 
+    <!-- Camera Permission Denied Screen -->
+    <Transition
+      enter-active-class="transition-opacity duration-300"
+      enter-from-class="opacity-0"
+      leave-active-class="transition-opacity duration-300"
+      leave-to-class="opacity-0">
+      <div
+        v-if="cameraError"
+        class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-gray-950 text-center px-8">
+
+        <!-- Icon -->
+        <div class="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+          <svg class="w-12 h-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M3 3l18 18" />
+          </svg>
+        </div>
+
+        <!-- Title -->
+        <h2 class="text-white text-2xl font-bold mb-3">
+          Không thể truy cập camera
+        </h2>
+
+        <!-- Error message -->
+        <p class="text-white/60 text-sm mb-8 max-w-sm leading-relaxed">
+          {{ cameraError }}
+        </p>
+
+        <!-- Hướng dẫn -->
+        <div class="bg-white/5 rounded-2xl p-4 mb-8 max-w-sm text-left">
+          <p class="text-white/80 text-xs font-semibold mb-2">Cách bật camera:</p>
+          <ol class="text-white/50 text-xs space-y-1 list-decimal list-inside">
+            <li>Click icon 🔒 trên thanh địa chỉ</li>
+            <li>Tìm mục "Camera" → chọn "Cho phép"</li>
+            <li>Tải lại trang và thử lại</li>
+          </ol>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex flex-col gap-3 w-full max-w-xs">
+          <button
+            @click="retryCamera"
+            class="w-full h-12 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Thử lại
+          </button>
+
+          <NuxtLink
+            to="/shop"
+            class="w-full h-12 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white font-medium rounded-xl transition-colors flex items-center justify-center">
+            Quay về cửa hàng
+          </NuxtLink>
+        </div>
+      </div>
+    </Transition>
+
   </div>
 </template>
 
@@ -77,6 +138,7 @@ const loadingPct   = ref(0)
 const confidence   = ref(0)
 const fps          = ref(0)
 const flashVisible = ref(false)
+const cameraError  = ref('')
 
 // ── Composables ───────────────────────────────────────────────────────
 const controls = useFittingControls()
@@ -95,13 +157,49 @@ function setStatus(s, t) { status.value = s; statusText.value = t }
 async function initWebcam() {
   loadingText.value = 'Đang mở camera...'
   loadingPct.value  = 10
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-  })
-  videoEl.value.srcObject = stream
-  return new Promise(resolve => {
-    videoEl.value.onloadedmetadata = () => { videoEl.value.play(); resolve() }
-  })
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+    })
+    videoEl.value.srcObject = stream
+    return new Promise(resolve => {
+      videoEl.value.onloadedmetadata = () => { videoEl.value.play(); resolve() }
+    })
+  } catch (err) {
+    if (err.name === 'NotAllowedError') {
+      cameraError.value = 'Bạn chưa cho phép truy cập camera. Vui lòng cấp quyền và thử lại.'
+    } else if (err.name === 'NotFoundError') {
+      cameraError.value = 'Không tìm thấy camera trên thiết bị này.'
+    } else if (err.name === 'NotReadableError') {
+      cameraError.value = 'Camera đang được sử dụng bởi ứng dụng khác. Vui lòng đóng ứng dụng đó và thử lại.'
+    } else if (err.name === 'OverconstrainedError') {
+      cameraError.value = 'Camera không hỗ trợ độ phân giải yêu cầu.'
+    } else {
+      cameraError.value = `Lỗi camera: ${err.message}`
+    }
+    setStatus('error', cameraError.value)
+    throw err // re-throw để onMounted catch được
+  }
+}
+
+// ── Retry camera ──────────────────────────────────────────────────────
+async function retryCamera() {
+  cameraError.value = ''
+  status.value      = 'loading'
+  loadingText.value = 'Đang khởi động lại...'
+  loadingPct.value  = 0
+
+  try {
+    await initWebcam()
+    loadingPct.value = 100
+    setStatus('ready', 'Sẵn sàng – đứng vào khung hình')
+    if (!animFrameId) {
+      requestAnimationFrame(renderLoop)
+    }
+  } catch (err) {
+    // cameraError đã được set trong initWebcam
+  }
 }
 
 // ── Render loop ───────────────────────────────────────────────────────
@@ -180,8 +278,11 @@ onMounted(async () => {
     window.addEventListener('resize', threeScene.onResize)
     requestAnimationFrame(renderLoop)
   } catch (err) {
-    statusText.value  = `Lỗi: ${err.message}`
-    loadingText.value = err.message
+    // Nếu là lỗi camera → cameraError đã được set, không ghi đè
+    if (!cameraError.value) {
+      statusText.value  = `Lỗi: ${err.message}`
+      loadingText.value = err.message
+    }
     console.error(err)
   }
 })

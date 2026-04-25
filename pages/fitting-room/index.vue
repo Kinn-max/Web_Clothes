@@ -6,7 +6,6 @@ import ResultView from '@/components/catvton/ResultView.vue'
 import ControlPanel from '@/components/catvton/ControlPanel.vue'
 import LoadingOverlay from '@/components/catvton/LoadingOverlay.vue'
 
-definePageMeta({ layout: false })
 
 const route = useRoute()
 const { tryOn, loading, error, result, reset } = useCatVTON()
