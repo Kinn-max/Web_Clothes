@@ -85,14 +85,18 @@ export const useAuth = () => {
         created_at: new Date(),
       });
     }
-
+    const idToken = await credential.user.getIdToken()
+    localStorage.setItem('token', idToken)
     return credential;
   };
-
-  const logout = async () => {
-    await signOut($auth);
-    navigateTo("/auth/login");
-  };
+  
+const logout = async () => {
+  await signOut($auth)
+  localStorage.removeItem('token')
+  token.value = null              
+  user.value = null               
+  navigateTo("/auth/login")
+}
 
   return {
     token,
