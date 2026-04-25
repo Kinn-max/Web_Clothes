@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useAuth } from "@/composables/useAuth";
-
+definePageMeta({ layout: false }) 
 type FormState = {
   email: string;
   password: string;
