@@ -8,10 +8,10 @@ import {
   Layers,
   MessageSquare,
   Tag,
-  Settings,
   Package,
   Ship,
-  Store 
+  Store,
+   Shirt
   
 } from "lucide-vue-next";
 import { icon } from "leaflet";
@@ -30,7 +30,7 @@ const menuItems = [
     label: "Sản phẩm",
     path: "/admin/products",
     icon: Package,
-    description: "Quản lý nước hoa",
+    description: "Quản lý sản phẩm",
   },
   {
     label: "Đơn hàng",
@@ -48,7 +48,7 @@ const menuItems = [
     label: "Danh mục",
     path: "/admin/categories",
     icon: Layers,
-    description: "Thương hiệu - nhóm mùi - nồng độ",
+    description: "Quản lý danh mục",
   },
   {
     label: "Đánh giá",
@@ -60,7 +60,7 @@ const menuItems = [
     label: "Vận chuyển",
     path:"/admin/shipping",
     icon: Ship,
-    description:"Quản lý trình trạng vận chuyển"
+    description:"Quản lý vận chuyển"
   },
   {
     label: "Khuyến mãi",
@@ -72,8 +72,14 @@ const menuItems = [
     label: "Cửa hàng",
     path: "/admin/stores",
     icon: Store,
-    description: "cửa hàng",
+    description: "Quản lý cửa hàng",
   },
+  {
+    label: "Thời trang AR",
+    path:"/admin/garments",
+    icon: Shirt,
+    description:"Quản lý trang phục AR"
+  }
 ];
 
 const isActive = (path: string) => route.path.startsWith(path);
@@ -99,7 +105,7 @@ const goTo = (path: string) => {
         <div
           class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg"
         >
-          <Stethoscope class="w-6 h-6 text-white" />
+          <Shirt class="w-6 h-6 text-white" />
         </div>
         <div>
           <span
@@ -150,10 +156,10 @@ const goTo = (path: string) => {
             </div>
 
             <div class="flex-1 text-left">
-              <div class="text-sm">{{ item.label }}</div>
+              <div class="text-sm leading-none">{{ item.label }}</div>
               <div
-                v-if="!isActive(item.path)"
-                class="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                class="text-[10px] text-gray-400 transition-all duration-200 overflow-hidden"
+                :class="isActive(item.path) ? 'max-h-0 opacity-0 mt-0' : 'max-h-0 opacity-0 mt-0 group-hover:max-h-4 group-hover:opacity-100 group-hover:mt-0.5'"
               >
                 {{ item.description }}
               </div>
@@ -177,18 +183,6 @@ const goTo = (path: string) => {
           </button>
         </li>
       </ul>
-
-      <!-- Divider -->
-      <!-- <div class="my-4 border-t border-blue-800/30"></div> -->
-
-      <!-- Settings -->
-      <!-- <button
-        @click="goTo('/settings')"
-        class="w-full group flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 text-gray-400 hover:bg-blue-800/30 hover:text-white hover:translate-x-1"
-      >
-        <Settings class="w-5 h-5 transition-transform duration-300 group-hover:rotate-90" />
-        <span class="text-sm">Cài đặt</span>
-      </button> -->
     </nav>
 
     <!-- Footer -->

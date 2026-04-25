@@ -228,11 +228,11 @@ onMounted(() => {
           <div class="grid-2">
             <div class="form-group">
               <label>Tên sản phẩm <span class="req">*</span></label>
-              <input v-model="form.name" type="text" class="input" placeholder="VD: Nước hoa Dior" />
+              <input v-model="form.name" type="text" class="input" placeholder="VD: Quần short" />
             </div>
             <div class="form-group">
               <label>Thương hiệu</label>
-              <input v-model="form.brand" type="text" class="input" placeholder="VD: Dior" />
+              <input v-model="form.brand" type="text" class="input" placeholder="VD: Nike" />
             </div>
           </div>
 

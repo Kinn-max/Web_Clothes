@@ -155,7 +155,7 @@ const goToDetail = (id?: string) => {
                 <label>Tên danh mục <span class="req">*</span></label>
                 <input
                   v-model="formData.name"
-                  placeholder="Ví dụ: Nước hoa nam"
+                  placeholder="Ví dụ: Quần ngắn nam"
                   :disabled="isSubmitting"
                 />
               </div>
