@@ -16,7 +16,7 @@ import { ArrowRight } from 'lucide-vue-next';
           </span>
         </h1>
         <p class="text-gray-600 text-lg md:max-w-md leading-relaxed">
-            Nâng tầm quy trình làm đẹp của bạn với bộ sưu tập mỹ phẩm và chăm sóc da cao cấp của chúng tôi. Được thiết kế để giúp bạn tỏa sáng.
+            Nâng tầm vóc dáng của bạn với bộ sưu trang phục và phụ kiện của chúng tôi. Được thiết kế để giúp bạn tỏa sáng.
         </p>
         <div class="flex flex-wrap gap-4 pt-4">
           <NuxtLink to="/shop" class="px-8 py-3 bg-gray-900 text-white font-medium rounded-full hover:bg-glow-primary-600 transition-colors flex items-center gap-2">
@@ -36,7 +36,7 @@ import { ArrowRight } from 'lucide-vue-next';
             
             <!-- Product Image -->
             <div class="relative h-full w-full rounded-3xl overflow-hidden shadow-2xl transform hover:scale-[1.02] transition-transform duration-500">
-              <img src="/the_final_set.jpg" alt="Bộ Sưu Tập Mới GlowUp" class="w-full h-full object-cover" />
+              <img src="/assets/home.jpg" alt="Bộ trang phụcMới GlowUp" class="w-full h-full object-cover" />
             </div>
         </div>
       </div>

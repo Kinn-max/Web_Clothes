@@ -10,9 +10,11 @@ import {
   ClipboardList,
   ChevronDown,
 } from "lucide-vue-next";
+import { onClickOutside } from "@vueuse/core";
 
 const { user, isAuthenticated, logout } = useAuth();
 const { cartCount } = useCart();
+const route = useRoute();
 
 const dropdownRef = ref(null);
 const isMenuOpen = ref(false);
@@ -30,11 +32,14 @@ const closeDropdowns = () => {
   isUserDropdownOpen.value = false;
 };
 
-// Sử dụng onClickOutside để đóng dropdown khi click ra ngoài
-import { onClickOutside } from "@vueuse/core";
 onClickOutside(dropdownRef, () => {
   isUserDropdownOpen.value = false;
 });
+
+const isActive = (path: string) => {
+  if (path === '/home') return route.path === '/home' || route.path === '/'
+  return route.path === path || route.path.startsWith(path + '/')
+}
 
 const navLinks = [
   { name: "Trang Chủ", path: "/home" },
@@ -42,9 +47,8 @@ const navLinks = [
   { name: "Giới Thiệu", path: "/about" },
   { name: "Liên Hệ", path: "/contact" },
   { name: "Xem đơn hàng", path: "/order/view_order" },
-  { name: "Phân tích da mặt", path: "/acne" },
   { name: "Phòng thử đồ", path: "/fitting-room" },
-  { name: "AR Viewer", path: "/ar-viewer" },
+  { name: "AR Viewer", path: "/AR-room" },
 ];
 
 const goToCart = () => {
@@ -57,16 +61,12 @@ const goToCart = () => {
 </script>
 
 <template>
-  <header
-    class="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100"
-  >
+  <header class="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
     <div class="container mx-auto px-4 md:px-6">
       <div class="flex items-center justify-between h-20">
+
         <!-- Logo -->
-        <NuxtLink
-          to="/"
-          class="text-2xl font-serif font-bold text-gray-900 tracking-wide"
-        >
+        <NuxtLink to="/" class="text-2xl font-serif font-bold text-gray-900 tracking-wide">
           GlowUp<span class="text-glow-primary-500">.</span>
         </NuxtLink>
 
@@ -76,10 +76,24 @@ const goToCart = () => {
             v-for="link in navLinks"
             :key="link.path"
             :to="link.path"
-            class="text-sm font-medium text-gray-600 hover:text-glow-primary-600 transition-colors uppercase tracking-wider"
-            active-class="text-glow-primary-600"
+            class="relative text-sm font-medium transition-all duration-200 uppercase tracking-wider group pb-1"
+            :class="isActive(link.path)
+              ? 'text-glow-primary-600 font-bold'
+              : 'text-gray-600 hover:text-glow-primary-600'"
           >
             {{ link.name }}
+
+            <!-- Underline animation -->
+            <span
+              class="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 bg-glow-primary-500 rounded-full transition-all duration-300"
+              :class="isActive(link.path) ? 'w-full' : 'w-0 group-hover:w-full'"
+            />
+
+            <!-- Dot indicator -->
+            <span
+              v-if="isActive(link.path)"
+              class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-glow-primary-500"
+            />
           </NuxtLink>
         </nav>
 
@@ -87,8 +101,16 @@ const goToCart = () => {
         <div class="hidden md:flex items-center gap-3">
           <!-- CHƯA LOGIN -->
           <template v-if="!isAuthenticated">
-            <NuxtLink to="/auth/login" class="auth-login"> Đăng nhập </NuxtLink>
-            <NuxtLink to="/auth/register" class="auth-register">
+            <NuxtLink
+              to="/auth/login"
+              class="text-sm font-semibold text-gray-700 px-3 py-2 rounded-full transition-all duration-200 hover:text-blue-600 hover:bg-blue-50"
+            >
+              Đăng nhập
+            </NuxtLink>
+            <NuxtLink
+              to="/auth/register"
+              class="text-sm font-bold text-white bg-blue-600 px-4 py-2 rounded-full transition-all duration-200 hover:bg-blue-700 hover:-translate-y-px"
+            >
               Đăng ký
             </NuxtLink>
           </template>
@@ -100,9 +122,7 @@ const goToCart = () => {
                 @click="toggleUserDropdown"
                 class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-glow-primary-600 transition-colors p-2 rounded-lg"
               >
-                <div
-                  class="w-8 h-8 rounded-full bg-glow-primary-50 flex items-center justify-center text-glow-primary-600"
-                >
+                <div class="w-8 h-8 rounded-full bg-glow-primary-50 flex items-center justify-center text-glow-primary-600">
                   <User class="w-4 h-4" />
                 </div>
                 <span>{{ displayName }}</span>
@@ -127,7 +147,7 @@ const goToCart = () => {
                 >
                   <NuxtLink
                     to="/profile"
-                    class="dropdown-item"
+                    class="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-all duration-200 w-full"
                     @click="closeDropdowns"
                   >
                     <Settings class="w-4 h-4" />
@@ -135,11 +155,8 @@ const goToCart = () => {
                   </NuxtLink>
                   <div class="my-1 border-t border-gray-100"></div>
                   <button
-                    @click="
-                      logout();
-                      closeDropdowns();
-                    "
-                    class="dropdown-item text-red-600 hover:bg-red-50"
+                    @click="logout(); closeDropdowns();"
+                    class="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200 w-full"
                   >
                     <LogOut class="w-4 h-4" />
                     Đăng xuất
@@ -169,7 +186,7 @@ const goToCart = () => {
             </span>
           </button>
 
-          <!-- Mobile Menu -->
+          <!-- Mobile Menu Toggle -->
           <button
             @click="toggleMenu"
             class="md:hidden hover:text-glow-primary-600 transition-colors"
@@ -182,145 +199,83 @@ const goToCart = () => {
     </div>
 
     <!-- Mobile Menu -->
-    <div
-      v-show="isMenuOpen"
-      class="md:hidden border-t border-gray-100 bg-white"
+    <transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 -translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 -translate-y-2"
     >
-      <nav class="flex flex-col p-4 gap-2">
-        <NuxtLink
-          v-for="link in navLinks"
-          :key="link.path"
-          :to="link.path"
-          class="py-3 text-base font-medium text-gray-600 hover:text-glow-primary-600 border-b border-gray-50 last:border-0"
-          @click="isMenuOpen = false"
-        >
-          {{ link.name }}
-        </NuxtLink>
+      <div v-show="isMenuOpen" class="md:hidden border-t border-gray-100 bg-white">
+        <nav class="flex flex-col p-4 gap-1">
+          <NuxtLink
+            v-for="link in navLinks"
+            :key="link.path"
+            :to="link.path"
+            class="flex items-center gap-3 py-3 px-3 text-base font-medium border-b border-gray-50 last:border-0 transition-all duration-200 rounded-lg"
+            :class="isActive(link.path)
+              ? 'text-glow-primary-600 font-bold bg-glow-primary-50 border-l-2 border-l-glow-primary-500'
+              : 'text-gray-600 hover:text-glow-primary-600 hover:bg-gray-50'"
+            @click="isMenuOpen = false"
+          >
+            <span
+              v-if="isActive(link.path)"
+              class="w-1.5 h-1.5 rounded-full bg-glow-primary-500 flex-shrink-0"
+            />
+            {{ link.name }}
+          </NuxtLink>
 
-        <!-- Mobile Auth -->
-        <div class="pt-4">
-          <template v-if="!isAuthenticated">
-            <NuxtLink to="/auth/login" class="block auth-login mb-2">
-              Đăng nhập
-            </NuxtLink>
-            <NuxtLink to="/auth/register" class="block auth-register">
-              Đăng ký
-            </NuxtLink>
-          </template>
-
-          <template v-else>
-            <div class="flex flex-col gap-1">
-              <p class="text-sm text-gray-500 px-3 py-2">
-                Xin chào, <b>{{ displayName }}</b>
-              </p>
+          <!-- Mobile Auth -->
+          <div class="pt-4">
+            <template v-if="!isAuthenticated">
               <NuxtLink
-                to="/profile"
-                class="mobile-nav-item"
-                @click="isMenuOpen = false"
+                to="/auth/login"
+                class="block text-center text-sm font-semibold text-gray-700 px-3 py-2 rounded-full mb-2 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
               >
-                <Settings class="w-4 h-4" />
-                Chỉnh sửa thông tin
+                Đăng nhập
               </NuxtLink>
               <NuxtLink
-                to="/order/view_order"
-                class="mobile-nav-item"
-                @click="isMenuOpen = false"
+                to="/auth/register"
+                class="block text-center text-sm font-bold text-white bg-blue-600 px-4 py-2 rounded-full hover:bg-blue-700 transition-all duration-200"
               >
-                <ClipboardList class="w-4 h-4" />
-                Xem đơn hàng
+                Đăng ký
               </NuxtLink>
-              <button
-                @click="logout"
-                class="mobile-nav-item text-red-600 mt-2 border-t border-gray-100 pt-3"
-              >
-                <LogOut class="w-4 h-4" />
-                Đăng xuất
-              </button>
-            </div>
-          </template>
-        </div>
-      </nav>
-    </div>
+            </template>
+
+            <template v-else>
+              <div class="flex flex-col gap-1">
+                <p class="text-sm text-gray-500 px-3 py-2">
+                  Xin chào, <b>{{ displayName }}</b>
+                </p>
+                <NuxtLink
+                  to="/profile"
+                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-gray-600 rounded-lg transition-all duration-200 active:bg-gray-100 hover:bg-gray-50"
+                  @click="isMenuOpen = false"
+                >
+                  <Settings class="w-4 h-4" />
+                  Chỉnh sửa thông tin
+                </NuxtLink>
+                <NuxtLink
+                  to="/order/view_order"
+                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-gray-600 rounded-lg transition-all duration-200 active:bg-gray-100 hover:bg-gray-50"
+                  @click="isMenuOpen = false"
+                >
+                  <ClipboardList class="w-4 h-4" />
+                  Xem đơn hàng
+                </NuxtLink>
+                <button
+                  @click="logout"
+                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-red-600 rounded-lg mt-2 border-t border-gray-100 pt-3 transition-all duration-200 hover:bg-red-50 w-full"
+                >
+                  <LogOut class="w-4 h-4" />
+                  Đăng xuất
+                </button>
+              </div>
+            </template>
+          </div>
+        </nav>
+      </div>
+    </transition>
   </header>
 </template>
-
-<style>
-.auth-login {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  padding: 0.45rem 0.75rem;
-  border-radius: 999px;
-  transition: all 0.2s ease;
-}
-
-.auth-login:hover {
-  color: #0b6fa3;
-  background: rgba(11, 111, 163, 0.08);
-}
-
-.auth-register {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: white;
-  background: #0b6fa3;
-  padding: 0.45rem 0.9rem;
-  border-radius: 999px;
-  transition: all 0.2s ease;
-}
-
-.auth-register:hover {
-  background: #095c88;
-  transform: translateY(-1px);
-}
-
-.auth-logout {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.45rem 0.75rem;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
-  transition: all 0.2s ease;
-}
-
-.auth-logout:hover {
-  background: #fecaca;
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
-.dropdown-item:hover {
-  background-color: #f9fafb;
-  color: #0b6fa3;
-}
-
-.mobile-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0.75rem 0.75rem;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: #4b5563;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
-}
-
-.mobile-nav-item:active {
-  background-color: #f3f4f6;
-}
-</style>
