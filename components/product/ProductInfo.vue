@@ -128,6 +128,7 @@ const handleQuantityBlur = (event: Event) => {
       </button>
     </div>
 
+
     <!-- Policies -->
     <div class="space-y-3 pt-6 border-t border-gray-100">
       <div class="flex items-center gap-3 text-sm text-gray-700">

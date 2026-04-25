@@ -3,12 +3,14 @@ import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import ProductGallery from "@/components/product/ProductGallery.vue";
 import ProductInfo from "@/components/product/ProductInfo.vue";
+import GarmentSelector from "@/components/product/GarmentSelector.vue";
 import ProductReviewSection from "@/components/product/ProductReviewSection.vue";
 import RelatedProducts from "@/components/product/RelatedProducts.vue";
 import { useNotification } from "@/composables/useNotification";
 import { useAuth } from "@/composables/useAuth";
 import { useCart } from "@/composables/useCart";
 import { useProduct } from "@/composables/useProduct";
+import { garmentApi } from "@/utils/api";
 
 const route = useRoute();
 const { isAuthenticated } = useAuth();
@@ -25,6 +27,8 @@ const quantity = ref(1);
 const loading = ref(true);
 const loadingRelated = ref(true);
 const addingToCart = ref(false);
+const garments = ref<any[]>([]);
+const loadingGarments = ref(false);
 
 const IMAGE_BASE_URL = "http://localhost:8081/uploads/products";
 
@@ -125,6 +129,18 @@ const loadProductData = async () => {
   }
 };
 
+const loadGarments = async () => {
+  const firestoreId = route.params.id as string;
+  loadingGarments.value = true;
+  try {
+    garments.value = await garmentApi.getByProductId(firestoreId);
+  } catch {
+    garments.value = [];
+  } finally {
+    loadingGarments.value = false;
+  }
+};
+
 const loadRelatedProducts = async () => {
   try {
     loadingRelated.value = true;
@@ -146,18 +162,21 @@ const loadRelatedProducts = async () => {
 onMounted(async () => {
   await loadProductData();
   await loadRelatedProducts();
+  await loadGarments();
 });
 
 
 watch(() => route.params.id, async (newId) => {
   if (newId) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+
     quantity.value = 1;
     selectedImage.value = "";
-    
+    garments.value = [];
+
     await loadProductData();
     await loadRelatedProducts();
+    await loadGarments();
   }
 });
 </script>
@@ -188,14 +207,26 @@ watch(() => route.params.id, async (newId) => {
           :imageBaseUrl="IMAGE_BASE_URL"
         />
 
-        <ProductInfo 
-          :product="product"
-          v-model:quantity="quantity"
-          :addingToCart="addingToCart"
-          :reviewsCount="reviews.length"
-          @addToCart="handleAddToCart"
-          @toggleWishlist="() => {}"
-        />
+        <div>
+          <ProductInfo
+            :product="product"
+            v-model:quantity="quantity"
+            :addingToCart="addingToCart"
+            :reviewsCount="reviews.length"
+            @addToCart="handleAddToCart"
+            @toggleWishlist="() => {}"
+          />
+
+          <!-- AR Garment Section -->
+          <GarmentSelector
+            v-if="garments.length > 0 || loadingGarments"
+            :garments="garments"
+            :loading="loadingGarments"
+            :product-name="product?.name ?? ''"
+            :firestore-product-id="(route.params.id as string)"
+            class="mt-8"
+          />
+        </div>
       </div>
 
       <!-- Reviews Section -->
