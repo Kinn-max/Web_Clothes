@@ -25,6 +25,7 @@
     "nuxt": "^3.17.7",
     "pinia": "^2.0.14",
     "pinia-plugin-persistedstate": "^2.1.1",
+    "qrcode": "^1.5.4",
     "three": "^0.183.2",
     "vue": "^3.5.17",
     "vue-chartjs": "^5.3.1",
@@ -35,6 +36,7 @@
   "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610",
   "devDependencies": {
     "@types/leaflet": "^1.9.21",
+    "@types/qrcode": "^1.5.6",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
     "sass-embedded": "^1.89.2",
