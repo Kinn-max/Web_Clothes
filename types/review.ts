@@ -32,3 +32,5 @@ export interface ReviewStats {
   total_reviews: number
   rating_distribution: Record<number, number>
 }
+import type { PaginatedResponse } from './common'
+export type { PaginatedResponse }
