@@ -1,181 +1,128 @@
-import { ref } from "vue";
+import type { Review, ReviewCreate, ReviewUpdate, ReviewStats, PaginatedResponse } from '@/types/review'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 
 export const useReview = () => {
-  const loading = ref(false);
-  const error = ref<string | null>(null);
+  const http = useApi()
+  const queryClient = useQueryClient()
 
-  const config = useRuntimeConfig();
-  const baseURL = config?.public?.apiBaseUrl || "http://localhost:8081/api";
-  const { token } = useAuth();
-
-  const getAuthHeaders = (): HeadersInit => {
-    if (token.value) {
-      return {
-        Authorization: `Bearer ${token.value}`,
-        "Content-Type": "application/json",
-      };
-    }
-    return { "Content-Type": "application/json" };
-  };
+  // ─── Queries ────────────────────────────────────────────────────────────────
 
   // Get all reviews (for admin)
-  const getAllReviews = async (page = 1, limit = 10) => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const response = await $fetch(`${baseURL}/reviews?page=${page}&limit=${limit}`, {
-        method: "GET",
-        headers: getAuthHeaders(),
-      });
-      return response;
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Lỗi khi lấy đánh giá";
-      throw error.value;
-    } finally {
-      loading.value = false;
-    }
-  };
+  const useAllReviews = (page = ref(1), limit = ref(10)) =>
+    useQuery({
+      queryKey: ['reviews', 'all', page, limit] as const,
+      queryFn: () =>
+        http.get<PaginatedResponse<Review>>(`/reviews?page=${page.value}&limit=${limit.value}`),
+    })
 
-  // Get reviews by product ID
-  const getProductReviews = async (productId: string | number, page = 1, limit = 5) => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const response = await $fetch(
-        `${baseURL}/reviews/product/${productId}?page=${page}&limit=${limit}`,
-        { method: "GET", headers: getAuthHeaders() }
-      );
-      return response;
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Lỗi khi lấy đánh giá sản phẩm";
-      throw error.value;
-    } finally {
-      loading.value = false;
-    }
-  };
+  // Get reviews by product ID (for product page)
+  const useProductReviews = (productId: Ref<string>, page = ref(1), limit = ref(5)) =>
+    useQuery({
+      queryKey: ['reviews', 'product', productId, page, limit] as const,
+      queryFn: () =>
+        http.get<PaginatedResponse<Review>>(
+          `/reviews/product/${productId.value}?page=${page.value}&limit=${limit.value}`
+        ),
+      enabled: computed(() => !!productId.value),
+    })
 
   // Get single review
-  const getReviewById = async (id: string | number) => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const response = await $fetch(`${baseURL}/reviews/${id}`, {
-        method: "GET",
-        headers: getAuthHeaders(),
-      });
-      return response;
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Lỗi khi lấy đánh giá";
-      throw error.value;
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  // Create review
-  const createReview = async (productId: string | number, data: any) => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const response = await $fetch(`${baseURL}/reviews/product/${productId}`, {
-        method: "POST",
-        body: data,
-        headers: getAuthHeaders(),
-      });
-      return response;
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Lỗi khi tạo đánh giá";
-      throw error.value;
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  // Update review
-  const updateReview = async (id: string | number, data: any) => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const response = await $fetch(`${baseURL}/reviews/${id}`, {
-        method: "PUT",
-        body: data,
-        headers: getAuthHeaders(),
-      });
-      return response;
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Lỗi khi cập nhật đánh giá";
-      throw error.value;
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  // Delete review
-  const deleteReview = async (id: string | number) => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const response = await $fetch(`${baseURL}/reviews/${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
-      return response;
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Lỗi khi xóa đánh giá";
-      throw error.value;
-    } finally {
-      loading.value = false;
-    }
-  };
+  const useReviewById = (id: Ref<string>) =>
+    useQuery({
+      queryKey: ['reviews', id] as const,
+      queryFn: () => http.get<Review>(`/reviews/${id.value}`),
+      enabled: computed(() => !!id.value),
+    })
 
   // Get average rating
-  const getAverageRating = async (productId: string | number) => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const response = await $fetch(`${baseURL}/reviews/rating/${productId}`, {
-        method: "GET",
-      });
-      return response;
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Lỗi khi lấy rating";
-      throw error.value;
-    } finally {
-      loading.value = false;
-    }
-  };
+  const useAverageRating = (productId: Ref<string | number>) =>
+    useQuery({
+      queryKey: ['reviews', 'rating', productId] as const,
+      queryFn: () => http.get<ReviewStats>(`/reviews/rating/${productId.value}`),
+      enabled: computed(() => !!productId.value),
+    })
 
   // Check user purchase
-  const checkUserPurchased = async (productId: string | number) => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const response = await $fetch(
-        `${baseURL}/reviews/check-purchase/${productId}`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
-      return (response as any)?.hasPurchased || false;
-    } catch (err: any) {
-      // If user not authenticated or any error, return false
-      return false;
-    } finally {
-      loading.value = false;
-    }
-  };
+  const useCheckUserPurchased = (productId: Ref<string | number>) =>
+    useQuery({
+      queryKey: ['reviews', 'check-purchase', productId] as const,
+      queryFn: async () => {
+        const res = await http.get<{ hasPurchased: boolean }>(
+          `/reviews/check-purchase/${productId.value}`
+        )
+        return res.hasPurchased ?? false
+      },
+      enabled: computed(() => !!productId.value),
+    })
+
+  // ─── Mutations ───────────────────────────────────────────────────────────────
+
+  // Create review
+  const createReview = useMutation({
+    mutationFn: ({
+      productId,
+      data,
+    }: {
+      productId: string
+      data: ReviewCreate
+    }): Promise<Review> => http.post<Review>(`/reviews/product/${productId}`, data),
+    onSuccess: (_, { productId }) => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'product', productId] })
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'rating', productId] })
+    },
+  })
+
+  // Update review
+  const updateReview = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number
+      data: ReviewUpdate
+    }): Promise<Review> => http.put<Review>(`/reviews/${id}`, data),
+    onSuccess: (updatedReview: Review) => {
+      // Cập nhật cache trực tiếp cho review đó
+      queryClient.setQueryData<Review>(
+        ['reviews', updatedReview.id],
+        updatedReview
+      )
+      // Invalidate danh sách reviews của product
+      queryClient.invalidateQueries({
+        queryKey: ['reviews', 'product', updatedReview.product_id],
+      })
+      // Invalidate rating vì rating có thể thay đổi
+      queryClient.invalidateQueries({
+        queryKey: ['reviews', 'rating', updatedReview.product_id],
+      })
+    },
+  })
+
+  // Delete review
+  const deleteReview = useMutation({
+    mutationFn: ({
+      id,
+      productId,
+    }: {
+      id: number
+      productId: string
+    }): Promise<void> => http.del<void>(`/reviews/${id}`),
+    onSuccess: (_, { productId }) => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'product', productId] })
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'rating', productId] })
+    },
+  })
 
   return {
-    loading,
-    error,
-    getAllReviews,
-    getProductReviews,
-    getReviewById,
+    // Queries
+    useAllReviews,
+    useProductReviews,
+    useReviewById,
+    useAverageRating,
+    useCheckUserPurchased,
+    // Mutations
     createReview,
     updateReview,
     deleteReview,
-    getAverageRating,
-    checkUserPurchased,
-  };
-};
+  }
+}
