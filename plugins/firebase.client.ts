@@ -1,61 +1,68 @@
-// plugins/firebase.client.ts
-import { initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import type { User } from "firebase/auth";
+import { initializeApp } from 'firebase/app'
+import { getAuth,onIdTokenChanged  } from 'firebase/auth'
+import { getFirestore, doc, getDoc } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
+import type { User } from 'firebase/auth'
+import { useAuthStore } from '@/stores/auth'
 
 export default defineNuxtPlugin(async () => {
   const config = useRuntimeConfig()
 
   const firebaseConfig = {
-  apiKey: config.public.firebaseApiKey as string,
-  authDomain: config.public.firebaseAuthDomain as string,
-  projectId: config.public.firebaseProjectId as string,
-  storageBucket: config.public.firebaseStorageBucket as string,
-  messagingSenderId: config.public.firebaseMessagingSenderId as string,
-  appId: config.public.firebaseAppId as string,
-  measurementId: config.public.firebaseMeasurementId as string,
-}
+    apiKey: config.public.firebaseApiKey as string,
+    authDomain: config.public.firebaseAuthDomain as string,
+    projectId: config.public.firebaseProjectId as string,
+    storageBucket: config.public.firebaseStorageBucket as string,
+    messagingSenderId: config.public.firebaseMessagingSenderId as string,
+    appId: config.public.firebaseAppId as string,
+    measurementId: config.public.firebaseMeasurementId as string,
+  }
+
   const app = initializeApp(firebaseConfig)
   const auth = getAuth(app)
   const db = getFirestore(app)
   const storage = getStorage(app)
 
-  const token = useState<string | null>("auth_token", () => null)
-  const user = useState<any>("auth_user", () => null)
-  const isReady = useState<boolean>("auth_ready", () => false)
+  const authStore = useAuthStore()
 
-  // Restore auth state khi refresh - chờ Firebase xong mới render
+  // Chờ Firebase restore session xong mới cho app render
+  // Tránh flash màn hình login khi user đã đăng nhập
   await new Promise<void>((resolve) => {
-    onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+    onIdTokenChanged(auth, async (firebaseUser: User | null) => {
       if (firebaseUser) {
+        // Lấy token mới nhất từ Firebase
         const idToken = await firebaseUser.getIdToken()
-        token.value = idToken
-        localStorage.setItem("token", idToken)
 
-        const userSnap = await getDoc(doc(db, "users", firebaseUser.uid))
+        // Lấy thông tin user từ Firestore
+        const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid))
+
         if (userSnap.exists()) {
-          user.value = {
-            userId: firebaseUser.uid,
-            ...userSnap.data(),
-          }
+          //  setAuth tự lo lưu token vào localStorage
+          authStore.setAuth(
+            {
+              userId: firebaseUser.uid,
+              ...userSnap.data(),
+            },
+            idToken
+          )
         } else {
-          user.value = {
-            userId: firebaseUser.uid,
-            email: firebaseUser.email,
-            full_name: firebaseUser.displayName ?? "",
-            role: "USER",
-          }
+          // Trường hợp user chưa có trong Firestore (hiếm)
+          authStore.setAuth(
+            {
+              userId: firebaseUser.uid,
+              email: firebaseUser.email ?? '',
+              full_name: firebaseUser.displayName ?? '',
+              role: 'USER',
+            },
+            idToken
+          )
         }
       } else {
-        token.value = null
-        user.value = null
-        localStorage.removeItem("token")
+        //  clearAuth tự lo xóa localStorage
+        authStore.clearAuth()
       }
 
-      isReady.value = true
-      resolve()
+      resolve() // app tiếp tục render
     })
   })
 
