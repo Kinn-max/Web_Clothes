@@ -2,7 +2,7 @@ import type { Review, ReviewCreate, ReviewUpdate, ReviewStats, PaginatedResponse
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 
 export const useReview = () => {
-  const http = useApi()
+  const http = useHttp()
   const queryClient = useQueryClient()
 
   // ─── Queries ────────────────────────────────────────────────────────────────
