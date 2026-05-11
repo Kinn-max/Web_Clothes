@@ -1,4 +1,4 @@
-import { computed } from "vue";
+
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -6,106 +6,125 @@ import {
   GoogleAuthProvider,
   signOut,
   updateProfile,
-} from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import type { AuthUser } from "../@type/auth";
+} from 'firebase/auth'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
+import type { AuthUser } from '@/types/auth'
 
 export const useAuth = () => {
+  const nuxtApp = useNuxtApp()
+  const $auth = nuxtApp.$auth as import('firebase/auth').Auth
+  const $db   = nuxtApp.$db  as import('firebase/firestore').Firestore
 
-  
-  const nuxtApp = useNuxtApp();
+  //  Source of truth duy nhất
+  const authStore = useAuthStore()
 
-  const $auth = nuxtApp.$auth as import("firebase/auth").Auth;
-  const $db = nuxtApp.$db as import("firebase/firestore").Firestore;
-
-  const token = useState<string | null>("auth_token", () => null);
-  const user = useState<AuthUser | null>("auth_user", () => null);
-
-  const isAuthenticated = computed(() => !!token.value && !!user.value);
-  const getUserId = computed(() => user.value?.userId ?? null);
-
-
-  
-  //SIGNUP
+  // ── SIGNUP ─────────────────────────────────────────────────
+  // Không cần setAuth ở đây vì sau signup
+  // firebase.client.ts sẽ tự bắt qua onAuthStateChanged
   const signup = async (data: {
-    full_name: string;
-    email: string;
-    password: string;
+    full_name: string
+    email: string
+    password: string
   }) => {
     const credential = await createUserWithEmailAndPassword(
       $auth,
       data.email,
       data.password
-    );
+    )
 
     await updateProfile(credential.user, {
       displayName: data.full_name,
-    });
-    await setDoc(doc($db, "users", credential.user.uid), {
-      email: data.email,
-      full_name: data.full_name,
-      role: "USER",
-      status:"active",
-      phone:"",
+    })
+
+    await setDoc(doc($db, 'users', credential.user.uid), {
+      email:      data.email,
+      full_name:  data.full_name,
+      role:       'USER',
+      status:     'active',
+      phone:      '',
       created_at: new Date(),
-    });
+    })
 
-    return credential;
-  };
+    return credential
+  }
 
-  //LOGIN 
- const login = async (data: { email: string; password: string }) => {
-  const userCredential = await signInWithEmailAndPassword(
-    $auth,
-    data.email,
-    data.password
-  );
+  // ── LOGIN ──────────────────────────────────────────────────
+  const login = async (data: { email: string; password: string }) => {
+    const credential = await signInWithEmailAndPassword(
+      $auth,
+      data.email,
+      data.password
+    )
 
-  const user = userCredential.user;
+    const idToken = await credential.user.getIdToken()
 
-  const token = await user.getIdToken();
+    // Lấy thêm role, full_name từ Firestore
+    const userSnap = await getDoc(doc($db, 'users', credential.user.uid))
+    const userData = userSnap.data()
+    authStore.setAuth(
+      {
+        userId:    credential.user.uid,
+        email:     credential.user.email    ?? '',
+        full_name: userData?.full_name      ?? credential.user.displayName ?? '',
+        role:      userData?.role           ?? 'USER',
+      },
+      idToken
+    )
 
-  localStorage.setItem("token", token);
+    return credential.user
+  }
 
-  return user;
-};
-  //GOOGLE LOGIN 
+  // ── GOOGLE LOGIN ───────────────────────────────────────────
   const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    const credential = await signInWithPopup($auth, provider);
+    const provider   = new GoogleAuthProvider()
+    const credential = await signInWithPopup($auth, provider)
 
-    const userRef = doc($db, "users", credential.user.uid);
-    const userSnap = await getDoc(userRef);
+    const userRef  = doc($db, 'users', credential.user.uid)
+    const userSnap = await getDoc(userRef)
 
     if (!userSnap.exists()) {
       await setDoc(userRef, {
-        email: credential.user.email,
-        full_name: credential.user.displayName,
-        role: "USER",
+        email:      credential.user.email,
+        full_name:  credential.user.displayName,
+        role:       'USER',
         created_at: new Date(),
-      });
+      })
     }
-    const idToken = await credential.user.getIdToken()
-    localStorage.setItem('token', idToken)
-    return credential;
-  };
-  
-const logout = async () => {
-  await signOut($auth)
-  localStorage.removeItem('token')
-  token.value = null              
-  user.value = null               
-  navigateTo("/auth/login")
-}
 
+    const idToken  = await credential.user.getIdToken()
+    const userData = userSnap.data()
+
+    authStore.setAuth(
+      {
+        userId:    credential.user.uid,
+        email:     credential.user.email    ?? '',
+        full_name: userData?.full_name      ?? credential.user.displayName ?? '',
+        role:      userData?.role           ?? 'USER',
+      },
+      idToken
+    )
+
+    return credential
+  }
+
+  // ── LOGOUT ─────────────────────────────────────────────────
+  const logout = async () => {
+    await signOut($auth)
+    authStore.clearAuth()
+    navigateTo('/auth/login')
+  }
+
+  //  Export computed từ store — dùng được ở mọi nơi
   return {
-    token,
-    user,
-    isAuthenticated,
-    getUserId,
+    token:           computed(() => authStore.token),
+    user:            computed(() => authStore.user),
+    isAuthenticated: computed(() => authStore.isAuthenticated),
+    userId:          computed(() => authStore.userId),  
+    role:            computed(() => authStore.role),
+    fullName:        computed(() => authStore.fullName),
     signup,
     login,
     loginWithGoogle,
     logout,
-  };
-};
+  }
+}
