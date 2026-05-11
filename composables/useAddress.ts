@@ -1,179 +1,97 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  writeBatch,
-  serverTimestamp,
-} from "firebase/firestore";
-import type { Address, AddressFormData } from "../@type/address";
-import { useAuth } from "./useAuth";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import type { Address, AddressCreate, AddressUpdate } from '@/types/address'
 
 export const useAddress = () => {
-  const nuxtApp = useNuxtApp();
-  const db = nuxtApp.$db as import("firebase/firestore").Firestore;
-  const { user, isAuthenticated } = useAuth();
+  const http = useHttp()
+  const authStore = useAuthStore()
+  const queryClient = useQueryClient()
 
-  const getUserId = (): string | null => {
-    if (!isAuthenticated.value || !user.value?.userId) return null;
-    return user.value.userId;
-  };
+  // Helper — lấy userId, throw nếu chưa login
+  const getUserId = (): number => {
+    const userId = authStore.userId
+    if (!userId) throw new Error('Chưa đăng nhập')
+    return Number(userId) // backend dùng int
+  }
 
+  // Base path theo backend route
+  const basePath = () => `/users/${getUserId()}/addresses`
 
-  const addressesRef = (userId: string) =>
-    collection(db, "users", userId, "addresses");
+  // ─── GET tất cả addresses ──────────────────────────────────
+  const useGetAllAddresses = () =>
+    useQuery({
+      queryKey: ['addresses', authStore.userId],
+      queryFn: () => http.get<Address[]>(basePath()),
+      enabled: computed(() => !!authStore.userId),
+    })
 
-  const addressDocRef = (userId: string, addressId: string) =>
-    doc(db, "users", userId, "addresses", addressId);
+  // ─── GET 1 address theo id ─────────────────────────────────
+  const useGetAddressById = (addressId: Ref<number>) =>
+    useQuery({
+      queryKey: ['addresses', authStore.userId, addressId],
+      queryFn: () =>
+        http.get<Address>(`${basePath()}/${addressId.value}`),
+      enabled: computed(() => !!authStore.userId && !!addressId.value),
+    })
 
+  // ─── POST tạo address mới ──────────────────────────────────
+  const useCreateAddress = () =>
+    useMutation({
+      mutationFn: (data: AddressCreate) =>
+        http.post<Address>(basePath(), data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ['addresses', authStore.userId],
+        })
+      },
+    })
 
+  // ─── PUT cập nhật address ──────────────────────────────────
+  const useUpdateAddress = () =>
+    useMutation({
+      mutationFn: ({
+        addressId,
+        data,
+      }: {
+        addressId: number
+        data: AddressUpdate
+      }) => http.put<Address>(`${basePath()}/${addressId}`, data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ['addresses', authStore.userId],
+        })
+      },
+    })
 
-  const getAllAddresses = async (): Promise<Address[]> => {
-    const userId = getUserId();
-    if (!userId) throw new Error("Chưa đăng nhập");
+  // ─── DELETE xóa address ────────────────────────────────────
+  const useDeleteAddress = () =>
+    useMutation({
+      mutationFn: (addressId: number) =>
+        http.del<void>(`${basePath()}/${addressId}`),
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ['addresses', authStore.userId],
+        })
+      },
+    })
 
-    try {
-      const q = query(addressesRef(userId), orderBy("created_at", "asc"));
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Address));
-    } catch (err) {
-      console.error("[useAddress] getAllAddresses:", err);
-      throw err;
-    }
-  };
-
-
-
-  const getAddressById = async (addressId: string): Promise<Address> => {
-    const userId = getUserId();
-    if (!userId) throw new Error("Chưa đăng nhập");
-
-    try {
-      const snap = await getDoc(addressDocRef(userId, addressId));
-      if (!snap.exists()) throw new Error("Địa chỉ không tồn tại");
-      return { id: snap.id, ...snap.data() } as Address;
-    } catch (err) {
-      console.error("[useAddress] getAddressById:", err);
-      throw err;
-    }
-  };
-
-
-
-  const createAddress = async (data: AddressFormData): Promise<Address> => {
-    const userId = getUserId();
-    if (!userId) throw new Error("Chưa đăng nhập");
-
-    try {
-      const batch = writeBatch(db);
-
-      // Nếu đặt làm mặc định → bỏ mặc định các địa chỉ cũ
-      if (data.is_default) {
-        const existing = await getDocs(addressesRef(userId));
-        existing.docs.forEach((d) => {
-          if (d.data().is_default) {
-            batch.update(d.ref, { is_default: false });
-          }
-        });
-      }
-
-      await batch.commit();
-
-      // Thêm địa chỉ mới
-      const payload = {
-        ...data,
-        user_id: userId,
-        created_at: Date.now(),
-        updated_at: Date.now(),
-      };
-      const docRef = await addDoc(addressesRef(userId), payload);
-      return { id: docRef.id, ...payload } as Address;
-    } catch (err) {
-      console.error("[useAddress] createAddress:", err);
-      throw err;
-    }
-  };
-
-
-  const updateAddress = async (
-    addressId: string,
-    data: AddressFormData
-  ): Promise<void> => {
-    const userId = getUserId();
-    if (!userId) throw new Error("Chưa đăng nhập");
-
-    try {
-      const batch = writeBatch(db);
-
-      if (data.is_default) {
-        const existing = await getDocs(addressesRef(userId));
-        existing.docs.forEach((d) => {
-          if (d.id !== addressId && d.data().is_default) {
-            batch.update(d.ref, { is_default: false });
-          }
-        });
-      }
-
-      batch.update(addressDocRef(userId, addressId), {
-        ...data,
-        updated_at: Date.now(),
-      });
-
-      await batch.commit();
-    } catch (err) {
-      console.error("[useAddress] updateAddress:", err);
-      throw err;
-    }
-  };
-
-
-
-  const deleteAddress = async (addressId: string): Promise<void> => {
-    const userId = getUserId();
-    if (!userId) throw new Error("Chưa đăng nhập");
-
-    try {
-      await deleteDoc(addressDocRef(userId, addressId));
-    } catch (err) {
-      console.error("[useAddress] deleteAddress:", err);
-      throw err;
-    }
-  };
-
-
-  const setDefaultAddress = async (addressId: string): Promise<void> => {
-    const userId = getUserId();
-    if (!userId) throw new Error("Chưa đăng nhập");
-
-    try {
-      const snap = await getDocs(addressesRef(userId));
-      const batch = writeBatch(db);
-
-      snap.docs.forEach((d) => {
-        const shouldBeDefault = d.id === addressId;
-        if (d.data().is_default !== shouldBeDefault) {
-          batch.update(d.ref, { is_default: shouldBeDefault });
-        }
-      });
-
-      await batch.commit();
-    } catch (err) {
-      console.error("[useAddress] setDefaultAddress:", err);
-      throw err;
-    }
-  };
+  // ─── PATCH set default address ─────────────────────────────
+  const useSetDefaultAddress = () =>
+    useMutation({
+      mutationFn: (addressId: number) =>
+        http.patch<Address>(`${basePath()}/${addressId}/set-default`, {}),
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ['addresses', authStore.userId],
+        })
+      },
+    })
 
   return {
-    getAllAddresses,
-    getAddressById,
-    createAddress,
-    updateAddress,
-    deleteAddress,
-    setDefaultAddress,
-  };
-};
+    useGetAllAddresses,
+    useGetAddressById,
+    useCreateAddress,
+    useUpdateAddress,
+    useDeleteAddress,
+    useSetDefaultAddress,
+  }
+}
