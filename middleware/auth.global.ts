@@ -1,40 +1,35 @@
-import { useAuth } from "@/composables/useAuth";
-
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (import.meta.server) return;
+  if (import.meta.server) return
 
-  // BỎ QUA AUTH PAGES
-  if (to.path.startsWith("/auth") || to.path === "/403") {
-    return;
+  // Bỏ qua auth pages
+  if (to.path.startsWith('/auth') || to.path === '/403') return
+
+  //  Dùng authStore thay vì useAuth()
+  const authStore = useAuthStore()
+
+  // Chưa login → về trang login
+  if (!authStore.token) {
+    return navigateTo('/auth/login')
   }
 
-  const { token, user, fetchMe } = useAuth();
-
-  // chưa login
-  if (!token.value) {
-    return navigateTo("/auth/login");
+  //  Không cần fetchMe nữa vì:
+  // firebase.client.ts đã restore user qua onIdTokenChanged
+  // authStore đã có đầy đủ token + user sau khi plugin chạy
+  if (!authStore.user) {
+    return navigateTo('/auth/login')
   }
 
-  // chưa có user → /me
-  if (!user.value) {
-    try {
-      await fetchMe();
-    } catch (err) {
-      return navigateTo("/auth/login");
-    }
+  const role = authStore.role
+
+  // Redirect từ root theo role
+  if (to.path === '/') {
+    return role === 'ADMIN'
+      ? navigateTo('/admin/dashboard')
+      : navigateTo('/home')
   }
 
-  const role = user.value?.role;
-
-  // redirect root
-  if (to.path === "/") {
-    return role === "admin"
-      ? navigateTo("/admin/dashboard")
-      : navigateTo("/home");
-  }
-
-  // check role theo meta
+  // Kiểm tra role theo route meta
   if (to.meta.role && to.meta.role !== role) {
-    return navigateTo("/403");
+    return navigateTo('/403')
   }
-});
+})
