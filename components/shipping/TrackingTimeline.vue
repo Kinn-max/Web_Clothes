@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ShippingTracking } from "@/@type/shipping";
+import type { ShippingTracking } from "@/types/shipping";
 
 interface Props {
   trackings: ShippingTracking[];

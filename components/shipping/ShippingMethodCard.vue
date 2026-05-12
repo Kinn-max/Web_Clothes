@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ShippingMethod } from "@/@type/shipping";
+import type { ShippingMethod } from "@/types/shipping";
 
 interface Props {
   method: ShippingMethod;

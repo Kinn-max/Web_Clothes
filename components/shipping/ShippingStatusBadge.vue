@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ShippingStatus } from "@/@type/shipping";
+import type { ShippingStatus } from "@/types/shipping";
 
 interface Props {
   status: ShippingStatus;
