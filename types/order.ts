@@ -1,4 +1,4 @@
-import type { Voucher } from './voucher';
+import type { Voucher } from '../types/voucher';
 
 
 export interface OrderItem {

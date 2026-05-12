@@ -23,3 +23,4 @@ export interface UserUpdate {
   phone?: string
   avatar_url?: string
 }
+
