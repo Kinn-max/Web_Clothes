@@ -1,36 +1,50 @@
+// types/review.ts
+
+// ── Response từ backend ────────────────────────────────────
 export interface Review {
   id: number
   user_id: number
-  product_id: string
-  rating: number
+  firestore_product_id: string   
+  rating: number                // 1-5
   comment?: string
   created_at: string
   updated_at: string
+  is_deleted?: boolean
+
+  // ── Fields bổ sung từ frontend (không có trong backend) ─
+  username?: string     
+  full_name?: string        
+  product_name?: string         
+  is_anonymous?: boolean        
+  has_purchased?: boolean       
+  media_urls?: string[]         
 }
 
+// ── Tạo review mới ────────────────────────────────────────
 export interface ReviewCreate {
   user_id: number
-  product_id: string
+  firestore_product_id: string  
   rating: number
   comment?: string
 }
 
+// ── Cập nhật review ───────────────────────────────────────
 export interface ReviewUpdate {
   rating?: number
   comment?: string
 }
 
-export interface ReviewParams {
-  product_id?: string
-  user_id?: number
-  rating?: number
+// ── Stats response ─────────────────────────────────────────
+export interface ReviewStats {
+  avg_rating: number            
+  total_reviews: number          
+  distribution: Record<string, number> 
 }
 
-export interface ReviewStats {
-  product_id: string
-  average_rating: number
-  total_reviews: number
-  rating_distribution: Record<number, number>
+// ── Paginated response dùng chung ──────────────────────────
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  limit: number
 }
-import type { PaginatedResponse } from './common'
-export type { PaginatedResponse }
