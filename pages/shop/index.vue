@@ -1,63 +1,72 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
 import { useProduct } from "../../composables/useProduct";
 import { useCategory } from "../../composables/useCategories";
-import type { Product } from "../../@type/product";
-import ShopHero from "@/components/shop/ShopHero.vue";
-import ShopSidebar from "@/components/shop/ShopSidebar.vue";
-import ShopToolbar from "@/components/shop/ShopToolbar.vue";
-import ProductCard from "@/components/shop/ProductCard.vue";
+import type { Product } from "../../types/product";
+import type { Category } from "@/types/category";
+import ShopHero       from "@/components/shop/ShopHero.vue";
+import ShopSidebar    from "@/components/shop/ShopSidebar.vue";
+import ShopToolbar    from "@/components/shop/ShopToolbar.vue";
+import ProductCard    from "@/components/shop/ProductCard.vue";
 import ShopPagination from "@/components/shop/ShopPagination.vue";
-import { useAuth } from "@/composables/useAuth";
-import { useCart } from "@/composables/useCart";
+import { useAuth }         from "@/composables/useAuth";
+import { useCart }         from "@/composables/useCart";
 import { useNotification } from "@/composables/useNotification";
+import type { AddToCartPayload } from "@/types/cart";
 
-const sortBy = ref("featured");
-const searchQuery = ref("");
-const priceRange = ref({ min: "", max: "" });
-
-const products = ref<Product[]>([]);
+const sortBy           = ref("featured");
+const searchQuery      = ref("");
+const priceRange       = ref({ min: "", max: "" });
+const products         = ref<Product[]>([]);
 const selectedCategory = ref<string | null>(null);
-const searchKeyword = ref("");
+const searchKeyword    = ref("");
 
-const { getProducts } = useProduct();
-const { isAuthenticated } = useAuth();
-const { addToCart } = useCart();
-const { showNotification } = useNotification();
+const { getProducts }        = useProduct();
+const { isAuthenticated }    = useAuth();
+const { addToCart }          = useCart();
+const { showNotification }   = useNotification();
 const { categories, getAll } = useCategory();
 
-const IMAGE_BASE_URL = "http://localhost:8081/uploads/products";
-const addingToCartId = ref<number | null>(null);
+const validCategories = computed<Category[]>(() =>
+  categories.value
+    .filter((c): c is typeof c & { id: string } => !!c.id)
+    .map(c => ({ ...c, id: c.id as string }))
+)
+
+// Product.id là string (Firestore), ProductCard lại expect number
+const addingToCartProductId = ref<string | null>(null) // track string id nội bộ
+
+// ProductCard expect number | null → truyền null khi không loading
+const addingToCartId = computed<string | null>(() => null) 
 
 const handleQuickAddToCart = async (product: Product) => {
   if (!isAuthenticated.value) {
     navigateTo("/auth/login");
     return;
   }
-  if (typeof product.id !== "number") {
-    console.error("Invalid product id", product.id);
-    return;
-  }
 
-  addingToCartId.value = product.id;
+  addingToCartProductId.value = String(product.id ?? "");
   try {
-    await addToCart(product.id, 1);
-    showNotification(
-      "Thành công",
-      `Đã thêm ${product.name} vào giỏ hàng!`,
-      "success"
-    );
-  } catch (error) {
-    console.error("Failed to add to cart:", error);
+    const payload: AddToCartPayload = {
+      product_id:  String(product.id),
+      name:        product.name,
+      price:       product.price,
+      brand:       product.brand,
+      images:      Array.isArray(product.images)
+                     ? product.images
+                     : product.images ? [product.images] : [],
+      gender:      product.gender,
+      description: product.description,
+    };
+    await addToCart(payload, 1);
+    showNotification("Thành công", `Đã thêm ${product.name} vào giỏ hàng!`, "success");
+  } catch {
     showNotification("Lỗi", "Có lỗi xảy ra khi thêm vào giỏ hàng.", "error");
   } finally {
-    addingToCartId.value = null;
+    addingToCartProductId.value = null;
   }
 };
 
-const handleApplyPrice = () => {
-  console.log("Applying price filter:", priceRange.value);
-};
+const handleApplyPrice = () => {};
 
 onMounted(async () => {
   try {
@@ -68,19 +77,17 @@ onMounted(async () => {
   }
 });
 
-const filteredProducts = computed(() => {
-  return products.value.filter((p) => {
-    // filter theo category
+const filteredProducts = computed(() =>
+  products.value.filter((p) => {
     const matchCategory =
       selectedCategory.value === null ||
-      p.category_id === selectedCategory.value;
+      String(p.category_id) === selectedCategory.value;
     const matchKeyword = p.name
       .toLowerCase()
       .includes(searchKeyword.value.toLowerCase());
-
     return matchCategory && matchKeyword;
-  });
-});
+  })
+);
 </script>
 
 <template>
@@ -93,24 +100,22 @@ const filteredProducts = computed(() => {
           v-model:selectedCategory="selectedCategory"
           v-model:priceRange="priceRange"
           v-model:searchQuery="searchQuery"
-          :categories="categories"
+          :categories="validCategories"
           @applyPrice="handleApplyPrice"
           @update:selectedCategory="(catId) => (selectedCategory = catId)"
           @update:searchQuery="(query) => (searchKeyword = query)"
         />
 
         <main class="flex-1">
-          <ShopToolbar :count="products.length" v-model:sortBy="sortBy" />
+          <ShopToolbar :count="filteredProducts.length" v-model:sortBy="sortBy" />
 
-          <div
-            class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12"
-          >
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12">
             <ProductCard
               v-for="product in filteredProducts"
               :key="product.id"
               :product="product"
               :addingToCartId="addingToCartId"
-              :imageBaseUrl="IMAGE_BASE_URL"
+              imageBaseUrl=""
               @quickAdd="handleQuickAddToCart"
             />
           </div>
@@ -118,9 +123,7 @@ const filteredProducts = computed(() => {
           <ShopPagination
             :currentPage="1"
             :totalPages="3"
-            @update:currentPage="
-              (page) => console.log('Page changed to:', page)
-            "
+            @update:currentPage="(page) => console.log('Page changed to:', page)"
           />
         </main>
       </div>

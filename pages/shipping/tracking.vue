@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useShipping } from "@/composables/useShipping";
 import { useNotification } from "@/composables/useNotification";
-import type { ShippingTracking } from "@/@type/shipping";
+import type { ShippingTracking } from "@/types/shipping";
 
 definePageMeta({
   layout: "default",

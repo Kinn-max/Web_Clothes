@@ -7,7 +7,7 @@ import BaseConfirmModal from "@/components/modal/BaseConfirmModal.vue";
 import OrderStatusTabs from "@/components/order/OrderStatusTabs.vue";
 import OrderHistoryCard from "@/components/order/OrderHistoryCard.vue";
 import { Package, ShoppingBag, X } from "lucide-vue-next";
-import type { Order } from "@/@type/order";
+import type { Order } from "@/types/order";
 
 const { orders, loading, error, fetchUserOrders, cancelOrder } = useOrder();
 const { user, isAuthenticated } = useAuth();

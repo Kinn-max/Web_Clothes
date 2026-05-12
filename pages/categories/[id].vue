@@ -3,8 +3,8 @@ import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useCategory } from "@/composables/useCategories";
 import { useProduct } from "@/composables/useProduct";
-import type { Category } from "../../@type/category";
-import type { Product } from "../../@type/product";
+import type { Category } from "@/types/category";
+import type { Product } from "@/types/product";
 
 const route = useRoute();
 const categoryId = route.params.id as string;
