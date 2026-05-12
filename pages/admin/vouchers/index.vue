@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
 import { useVoucher } from "@/composables/useVoucher";
-import type { Voucher } from "../../../@type/voucher";
+import type { Voucher } from "../../../types/voucher";
 
 definePageMeta({ layout: "admin" });
 

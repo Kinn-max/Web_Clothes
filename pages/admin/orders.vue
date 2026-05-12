@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useOrder } from "../../composables/useOrder";
-import { useNotification } from "../../composables/useNotification";
-import type { Order } from "../../@type/order";
-import BaseConfirmModal from "../../components/modal/BaseConfirmModal.vue";
+import { useOrder } from "@/composables/useOrder";
+import { useNotification } from "@/composables/useNotification";
+import type { Order } from "@/types/order";
+import BaseConfirmModal from "@/components/modal/BaseConfirmModal.vue";
 
 definePageMeta({
   layout: "admin",
