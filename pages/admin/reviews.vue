@@ -257,115 +257,95 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useReview } from "@/composables/useReview";
-import { useNotification } from "@/composables/useNotification";
+import type { Review } from '@/types/review'
 
-definePageMeta({
-  layout: 'admin',
-});
+definePageMeta({ layout: 'admin' })
 
-const { getAllReviews, deleteReview: deleteReviewApi } = useReview();
-const { showNotification } = useNotification();
+const { useAllReviews, useDeleteReview } = useReview()
+const { showNotification } = useNotification()
 
-const reviews = ref<any[]>([]);
-const loading = ref(false);
-const currentPage = ref(1);
-const pageSize = ref(10);
-const totalReviews = ref(0);
-const filterRating = ref("");
-const searchQuery = ref("");
-const selectedReview = ref<any>(null);
+const currentPage  = ref(1)
+const pageSize     = ref(10)
+const filterRating = ref('')
+const searchQuery  = ref('')
+const selectedReview = ref<Review | null>(null)
 
-const totalPages = computed(() => Math.ceil(totalReviews.value / pageSize.value));
+const { data: reviewResponse, isLoading: loading } = useAllReviews(
+  currentPage,
+  pageSize
+)
+
+const { mutate: deleteReviewMutate } = useDeleteReview()
+
+// ── Computed ───────────────────────────────────────────────
+const reviews = computed(() => reviewResponse.value?.data ?? [])
+const totalReviews = computed(() => reviewResponse.value?.total ?? 0)
+const totalPages = computed(() =>
+  Math.ceil(totalReviews.value / pageSize.value)
+)
 
 const ratingCounts = computed(() => {
-  const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  reviews.value.forEach((review) => {
-    counts[review.rating]++;
-  });
-  return counts;
-});
+  const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  reviews.value.forEach((r) => { counts[r.rating]++ })
+  return counts
+})
 
 const averageRating = computed(() => {
-  if (reviews.value.length === 0) return "0";
-  const sum = reviews.value.reduce((acc, review) => acc + review.rating, 0);
-  return (sum / reviews.value.length).toFixed(1);
-});
+  if (!reviews.value.length) return '0'
+  const sum = reviews.value.reduce((acc, r) => acc + r.rating, 0)
+  return (sum / reviews.value.length).toFixed(1)
+})
 
-const filteredReviews = computed(() => {
-  return reviews.value.filter((review) => {
-    const matchesRating = !filterRating.value || review.rating === parseInt(filterRating.value);
-    const matchesSearch =
-      !searchQuery.value ||
-      (review.username && review.username.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
-      (review.product_name && review.product_name.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
-      (review.comment && review.comment.toLowerCase().includes(searchQuery.value.toLowerCase()));
-    return matchesRating && matchesSearch;
-  });
-});
+const filteredReviews = computed(() =>
+  reviews.value.filter((r) => {
+    const matchRating = !filterRating.value ||
+      r.rating === parseInt(filterRating.value)
+    const q = searchQuery.value.toLowerCase()
+    const matchSearch = !q
+      || r.username?.toLowerCase().includes(q)
+      || r.product_name?.toLowerCase().includes(q)
+      || r.comment?.toLowerCase().includes(q)
+    return matchRating && matchSearch
+  })
+)
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString("vi-VN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+// ── Handlers ───────────────────────────────────────────────
+const formatDate = (date: string) =>
+  new Date(date).toLocaleDateString('vi-VN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
 
-const loadReviews = async () => {
-  loading.value = true;
-  try {
-    const response = await getAllReviews(currentPage.value, pageSize.value);
-    reviews.value = response.data || [];
-    totalReviews.value = response.total || 0;
-  } catch (error: any) {
-    console.error("Error loading reviews:", error);
-    const errorMsg = error?.message || error?.data?.message || String(error) || "Lỗi khi tải danh sách đánh giá";
-    showNotification({
-      type: "error",
-      message: errorMsg,
-    });
-  } finally {
-    loading.value = false;
-  }
-};
-
-const deleteReview = async (id: number) => {
-  if (!confirm("Bạn có chắc muốn xóa đánh giá này?")) return;
-
-  try {
-    await deleteReviewApi(id);
-    showNotification({
-      type: "success",
-      message: "Đánh giá đã được xóa",
-    });
-    selectedReview.value = null;
-    await loadReviews();
-  } catch (error: any) {
-    console.error("Error deleting review:", error);
-    const errorMsg = error?.message || error?.data?.message || String(error) || "Lỗi khi xóa đánh giá";
-    showNotification({
-      type: "error",
-      message: errorMsg,
-    });
-  }
-};
-
-const viewReview = (review: any) => {
-  selectedReview.value = review;
-};
+const viewReview = (review: Review) => {
+  selectedReview.value = review
+}
 
 const resetFilters = () => {
-  filterRating.value = "";
-  searchQuery.value = "";
-};
+  filterRating.value = ''
+  searchQuery.value  = ''
+}
 
-onMounted(() => {
-  loadReviews();
-});
+const deleteReview = (id: number) => {
+  if (!confirm('Bạn có chắc muốn xóa đánh giá này?')) return
+
+  // Lấy firestoreProductId từ review đang chọn
+  const firestoreProductId = selectedReview.value?.firestore_product_id
+    ?? reviews.value.find(r => r.id === id)?.firestore_product_id
+    ?? ''
+
+  deleteReviewMutate(
+    { id, firestoreProductId },
+    {
+      onSuccess: () => {
+        showNotification('Thành công', 'Đánh giá đã được xóa', 'success')
+        selectedReview.value = null
+      },
+      onError: (err: any) => {
+        showNotification('Lỗi', err?.message || 'Lỗi khi xóa đánh giá', 'error')
+      },
+    }
+  )
+}
 </script>
+
