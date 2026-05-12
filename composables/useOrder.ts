@@ -9,7 +9,7 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import type { Order } from "@/@type/order";
+import type { Order } from "@/types/order";
 
 
 export const useOrder = () => {

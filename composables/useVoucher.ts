@@ -10,7 +10,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import type { Firestore } from "firebase/firestore";
-import type { Voucher } from "../@type/voucher";
+import type { Voucher } from "../types/voucher";
 
 export const useVoucher = () => {
   const { $db } = useNuxtApp();

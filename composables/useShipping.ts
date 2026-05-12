@@ -3,7 +3,7 @@ import type {
   ShippingMethod,
   ShippingTracking,
   CreateTrackingPayload,
-} from "@/@type/shipping";
+} from "@/types/shipping";
 
 export const useShipping = () => {
   const config = useRuntimeConfig();

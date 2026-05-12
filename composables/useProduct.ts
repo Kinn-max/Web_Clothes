@@ -14,7 +14,7 @@ import {
 
 import type { Firestore } from "firebase/firestore";
 import type { FirebaseStorage } from "firebase/storage";
-import type { Product } from "@/@type/product";
+import type { Product } from "@/types/product";
 
 export const useProduct = () => {
   const { $db, $storage } = useNuxtApp();
