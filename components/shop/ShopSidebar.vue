@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Search } from "lucide-vue-next";
-import type { Category } from "@/@type/category";
+import type { Category } from "@/types/category";
 
 const props = defineProps<{
   categories: Category[];

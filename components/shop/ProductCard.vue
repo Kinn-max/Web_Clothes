@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Star, ShoppingBag, Heart } from "lucide-vue-next";
-import type { Product } from "../../@type/product";
+import type { Product } from "../../types/product";
 
 const props = defineProps<{
   product: Product;
-  addingToCartId: number | null;
-  imageBaseUrl: string;
+  addingToCartId: number | string | null;
+  imageBaseUrl?: string;
 }>();
 
 const emit = defineEmits<{
