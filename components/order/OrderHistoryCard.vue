@@ -9,7 +9,7 @@ import {
   X,
   User,
 } from "lucide-vue-next";
-import type { Order } from "@/@type/order";
+import type { Order } from "@/types/order";
 
 const props = defineProps<{
   order: Order;

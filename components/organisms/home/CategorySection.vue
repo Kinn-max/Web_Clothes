@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ArrowRight } from "lucide-vue-next";
 import { useCategory } from "@/composables/useCategories";
-import type { Category } from "../../../@type/category";
 
 const config = useRuntimeConfig();
 const { categories, loading, getAll } = useCategory();
