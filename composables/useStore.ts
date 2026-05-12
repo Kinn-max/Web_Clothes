@@ -1,166 +1,116 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  serverTimestamp,
-  Timestamp,
-} from "firebase/firestore";
-import type { Firestore } from "firebase/firestore";
-import type { Store } from "@/@type/store";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import type { Store, StoreCreate, StoreUpdate } from '@/types/store'
 
 export const useStore = () => {
-  const { $db } = useNuxtApp();
-  const db = $db as Firestore;
+  const http = useHttp()
+  const queryClient = useQueryClient()
 
-  const loading = ref(false);
-  const error = ref<string | null>(null);
+  // ─── GET tất cả stores ────────────────────────────────────
+  const useGetAllStores = (params?: {
+    skip?: Ref<number>
+    limit?: Ref<number>
+    is_active?: Ref<boolean | undefined>
+  }) =>
+    useQuery({
+      queryKey: ['stores', params?.skip, params?.limit, params?.is_active],
+      queryFn: () => {
+        const skip      = params?.skip?.value      ?? 0
+        const limit     = params?.limit?.value     ?? 10
+        const is_active = params?.is_active?.value
 
-  /** Chuyển Firestore doc → Store object */
-  const normalize = (id: string, data: any): Store => ({
-    ...data,
-    id,
-    createdAt:
-      data.createdAt instanceof Timestamp
-        ? data.createdAt.toDate().toISOString()
-        : data.createdAt ?? null,
-    updatedAt:
-      data.updatedAt instanceof Timestamp
-        ? data.updatedAt.toDate().toISOString()
-        : data.updatedAt ?? null,
-  });
+        const query = new URLSearchParams({
+          skip:  String(skip),
+          limit: String(limit),
+          ...(is_active !== undefined && { is_active: String(is_active) }),
+        })
+        return http.get<Store[]>(`/stores?${query}`)
+      },
+    })
 
-  /** Lấy tất cả cửa hàng */
-  const getAllStores = async (): Promise<Store[]> => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const snap = await getDocs(collection(db, "stores"));
-      return snap.docs.map((d) => normalize(d.id, d.data()));
-    } catch (err: any) {
-      error.value = "Không thể lấy danh sách cửa hàng";
-      console.error("[useStore] getAllStores:", err);
-      throw err;
-    } finally {
-      loading.value = false;
+  // ─── GET 1 store theo id ──────────────────────────────────
+  const useGetStoreById = (id: Ref<string>) =>
+    useQuery({
+      queryKey: ['stores', id],
+      queryFn: () => http.get<Store>(`/stores/${id.value}`),
+      enabled: computed(() => !!id.value),
+    })
+
+  // ─── POST tạo store ───────────────────────────────────────
+  const useCreateStore = () =>
+    useMutation({
+      mutationFn: (data: StoreCreate) =>
+        http.post<Store>('/stores', data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['stores'] })
+      },
+    })
+
+  // ─── PATCH cập nhật store ─────────────────────────────────
+  // Backend dùng PATCH không phải PUT
+  const useUpdateStore = () =>
+    useMutation({
+      mutationFn: ({ id, data }: { id: string; data: StoreUpdate }) =>
+        http.patch<Store>(`/stores/${id}`, data),
+      onSuccess: (updatedStore) => {
+        queryClient.setQueryData(['stores', updatedStore.id], updatedStore)
+        queryClient.invalidateQueries({ queryKey: ['stores'] })
+      },
+    })
+
+  // ─── DELETE xóa store ─────────────────────────────────────
+  const useDeleteStore = () =>
+    useMutation({
+      mutationFn: (id: string) =>
+        http.del<void>(`/stores/${id}`),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['stores'] })
+      },
+    })
+
+  // ─── Tìm store gần nhất (tính ở frontend) ────────────────
+  // Backend không có endpoint này → tính từ danh sách stores
+  const findNearestStore = (
+    stores: Store[],
+    lat: number,
+    lng: number
+  ): Store | null => {
+    if (!stores.length) return null
+
+    // Chỉ tính với store có tọa độ
+    const storesWithCoords = stores.filter(
+      (s) => s.latitude != null && s.longitude != null
+    )
+    if (!storesWithCoords.length) return null
+
+    // Haversine formula — tính khoảng cách giữa 2 điểm trên trái đất
+    const toRad = (deg: number) => (deg * Math.PI) / 180
+    const getDistance = (s: Store) => {
+      const R    = 6371 // bán kính trái đất (km)
+      const dLat = toRad(s.latitude! - lat)
+      const dLng = toRad(s.longitude! - lng)
+      const a    =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat)) *
+        Math.cos(toRad(s.latitude!)) *
+        Math.sin(dLng / 2) ** 2
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     }
-  };
 
-  /** Lấy cửa hàng theo ID */
-  const getStoreById = async (storeId: string): Promise<Store> => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const snap = await getDoc(doc(db, "stores", storeId));
-      if (!snap.exists()) throw new Error("Không tìm thấy cửa hàng");
-      return normalize(snap.id, snap.data());
-    } catch (err: any) {
-      error.value = "Không thể lấy thông tin cửa hàng";
-      console.error("[useStore] getStoreById:", err);
-      throw err;
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  /**
-   * Lấy cửa hàng của manager hiện tại.
-   * Query: stores where managerId == current user's uid
-   */
-  const getMyStores = async (): Promise<Store[]> => {
-    const { user } = useAuth();
-    const uid = user.value?.userId;
-    if (!uid) return [];
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const q = query(
-        collection(db, "stores"),
-        where("managerId", "==", uid)
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => normalize(d.id, d.data()));
-    } catch (err: any) {
-      error.value = "Không thể lấy cửa hàng của bạn";
-      console.error("[useStore] getMyStores:", err);
-      throw err;
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  /** Tạo cửa hàng mới (Admin) */
-  const createStore = async (storeData: Omit<Store, "id">): Promise<Store> => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const ref = await addDoc(collection(db, "stores"), {
-        ...storeData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      return { ...storeData, id: ref.id };
-    } catch (err: any) {
-      error.value = "Không thể tạo cửa hàng";
-      console.error("[useStore] createStore:", err);
-      throw err;
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  /** Cập nhật cửa hàng */
-  const updateStore = async (
-    storeId: string,
-    storeData: Partial<Store>
-  ): Promise<void> => {
-    loading.value = true;
-    error.value = null;
-    try {
-      // Loại bỏ field "id" trước khi lưu vào Firestore
-      const { id: _id, ...data } = storeData as any;
-      await updateDoc(doc(db, "stores", storeId), {
-        ...data,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (err: any) {
-      error.value = "Không thể cập nhật cửa hàng";
-      console.error("[useStore] updateStore:", err);
-      throw err;
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  /** Xóa cửa hàng (Admin) */
-  const deleteStore = async (storeId: string): Promise<void> => {
-    loading.value = true;
-    error.value = null;
-    try {
-      await deleteDoc(doc(db, "stores", storeId));
-    } catch (err: any) {
-      error.value = "Không thể xóa cửa hàng";
-      console.error("[useStore] deleteStore:", err);
-      throw err;
-    } finally {
-      loading.value = false;
-    }
-  };
+    // Sắp xếp theo khoảng cách → lấy gần nhất
+    return [...storesWithCoords].sort(
+      (a, b) => getDistance(a) - getDistance(b)
+    )[0]
+  }
 
   return {
-    loading,
-    error,
-    getAllStores,
-    getStoreById,
-    getMyStores,
-    createStore,
-    updateStore,
-    deleteStore,
-  };
-};
+    // Queries
+    useGetAllStores,
+    useGetStoreById,
+    // Mutations
+    useCreateStore,
+    useUpdateStore,
+    useDeleteStore,
+    // Utils
+    findNearestStore,
+  }
+}

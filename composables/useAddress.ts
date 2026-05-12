@@ -1,36 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import type { Address, AddressCreate, AddressUpdate } from '@/types/address'
+import { useRequireAuth } from './useRequireAuth'
 
 export const useAddress = () => {
   const http = useHttp()
-  const authStore = useAuthStore()
   const queryClient = useQueryClient()
 
-  // Helper — lấy userId, throw nếu chưa login
-  const getUserId = (): number => {
-    const userId = authStore.userId
-    if (!userId) throw new Error('Chưa đăng nhập')
-    return Number(userId) // backend dùng int
-  }
+  const { requireUserIdInt, userId } = useRequireAuth()
 
-  // Base path theo backend route
-  const basePath = () => `/users/${getUserId()}/addresses`
+  // Base path — gọi requireUserIdInt() lúc runtime
+  // nếu chưa login → tự throw → TanStack bắt lỗi
+  const basePath = () => `/users/${requireUserIdInt()}/addresses`
 
   // ─── GET tất cả addresses ──────────────────────────────────
   const useGetAllAddresses = () =>
     useQuery({
-      queryKey: ['addresses', authStore.userId],
+      queryKey: ['addresses', userId],         
       queryFn: () => http.get<Address[]>(basePath()),
-      enabled: computed(() => !!authStore.userId),
+      enabled: computed(() => !!userId.value), 
     })
 
   // ─── GET 1 address theo id ─────────────────────────────────
   const useGetAddressById = (addressId: Ref<number>) =>
     useQuery({
-      queryKey: ['addresses', authStore.userId, addressId],
+      queryKey: ['addresses', userId, addressId],
       queryFn: () =>
         http.get<Address>(`${basePath()}/${addressId.value}`),
-      enabled: computed(() => !!authStore.userId && !!addressId.value),
+      enabled: computed(() => !!userId.value && !!addressId.value),
     })
 
   // ─── POST tạo address mới ──────────────────────────────────
@@ -40,7 +36,7 @@ export const useAddress = () => {
         http.post<Address>(basePath(), data),
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['addresses', authStore.userId],
+          queryKey: ['addresses', userId],
         })
       },
     })
@@ -57,7 +53,7 @@ export const useAddress = () => {
       }) => http.put<Address>(`${basePath()}/${addressId}`, data),
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['addresses', authStore.userId],
+          queryKey: ['addresses', userId],
         })
       },
     })
@@ -69,7 +65,7 @@ export const useAddress = () => {
         http.del<void>(`${basePath()}/${addressId}`),
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['addresses', authStore.userId],
+          queryKey: ['addresses', userId],
         })
       },
     })
@@ -81,7 +77,7 @@ export const useAddress = () => {
         http.patch<Address>(`${basePath()}/${addressId}/set-default`, {}),
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['addresses', authStore.userId],
+          queryKey: ['addresses', userId],
         })
       },
     })
