@@ -4,6 +4,7 @@ import { useRoute } from "vue-router";
 import ProductGallery from "@/components/product/ProductGallery.vue";
 import ProductInfo from "@/components/product/ProductInfo.vue";
 import GarmentSelector from "@/components/product/GarmentSelector.vue";
+import SnapchatARButton from "@/components/product/SnapchatARButton.vue";
 import ProductReviewSection from "@/components/product/ProductReviewSection.vue";
 import RelatedProducts from "@/components/product/RelatedProducts.vue";
 import { useNotification } from "@/composables/useNotification";
@@ -29,6 +30,11 @@ const loadingRelated = ref(true);
 const addingToCart = ref(false);
 const garments = ref<any[]>([]);
 const loadingGarments = ref(false);
+const selectedGarment = ref<any>(null);
+
+const handleSelectGarment = (garment: any) => {
+  selectedGarment.value = garment;
+};
 
 const IMAGE_BASE_URL = "http://localhost:8081/uploads/products";
 
@@ -39,7 +45,7 @@ const mockReviews = [
     user: "Nguyễn Thùy Linh",
     rating: 5,
     date: "10/01/2026",
-    content: "Sản phẩm dùng rất thích, mùi thơm nhẹ nhàng, giao hàng nhanh!",
+    content: "Sản phẩm dùng rất thích, giao hàng nhanh!",
     verify: true,
   },
   {
@@ -173,6 +179,7 @@ watch(() => route.params.id, async (newId) => {
     quantity.value = 1;
     selectedImage.value = "";
     garments.value = [];
+    selectedGarment.value = null;
 
     await loadProductData();
     await loadRelatedProducts();
@@ -225,7 +232,27 @@ watch(() => route.params.id, async (newId) => {
             :product-name="product?.name ?? ''"
             :firestore-product-id="(route.params.id as string)"
             class="mt-8"
+            @selectGarment="handleSelectGarment"
           />
+
+          <!-- Snapchat AR -->
+          <SnapchatARButton
+            v-if="selectedGarment"
+            :garment-id="selectedGarment.id"
+            :garment-name="selectedGarment.name"
+            class="mt-4"
+          />
+
+          <!-- Photo Try-On 3D -->
+          <NuxtLink
+            :to="`/photo-tryon?garment_id=${product.id}&product_name=${encodeURIComponent(product.name)}&product_id=${product.id}`"
+            class="mt-4 flex items-center justify-center gap-2 h-12 rounded-2xl border-2 border-violet-200 bg-violet-50 text-violet-700 font-bold text-sm hover:bg-violet-100 hover:border-violet-300 transition-all">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            Thử 3D Photo
+          </NuxtLink>
         </div>
       </div>
 
