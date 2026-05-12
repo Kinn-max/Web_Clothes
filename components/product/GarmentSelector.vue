@@ -8,6 +8,10 @@ const props = defineProps<{
   firestoreProductId: string
 }>()
 
+const emit = defineEmits<{
+  selectGarment: [garment: Garment]
+}>()
+
 const selectedGarment = ref<Garment | null>(null)
 
 watch(
@@ -15,10 +19,16 @@ watch(
   (list) => {
     if (list.length > 0 && !selectedGarment.value) {
       selectedGarment.value = list[0]
+      emit('selectGarment', list[0])
     }
   },
   { immediate: true },
 )
+
+const selectGarment = (garment: Garment) => {
+  selectedGarment.value = garment
+  emit('selectGarment', garment)
+}
 
 const tryOnUrl = computed(() => {
   if (!selectedGarment.value?.cloth_image_url) return null
@@ -79,7 +89,7 @@ const previewImage = computed(
             :key="garment.id"
             type="button"
             :title="garment.name"
-            @click="selectedGarment = garment"
+            @click="selectGarment(garment)"
             class="w-8 h-8 rounded-full overflow-hidden border-2 transition-all duration-150 hover:scale-110 focus:outline-none relative flex-shrink-0"
             :class="selectedGarment?.id === garment.id
               ? 'border-violet-500 ring-2 ring-violet-300'
@@ -127,7 +137,7 @@ const previewImage = computed(
           Thử đồ AI
         </NuxtLink>
 
-        <NuxtLink
+        <!-- <NuxtLink
           v-if="arViewerUrl"
           :to="arViewerUrl"
           class="flex-1 h-11 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 shadow-md shadow-blue-100 hover:from-blue-700 hover:to-cyan-600 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all duration-200"
@@ -137,7 +147,7 @@ const previewImage = computed(
               d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
           </svg>
           Xem 3D
-        </NuxtLink>
+        </NuxtLink> -->
       </div>
     </template>
   </div>
