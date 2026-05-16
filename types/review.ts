@@ -4,20 +4,20 @@
 export interface Review {
   id: number
   user_id: number
-  firestore_product_id: string   
-  rating: number                // 1-5
+  firestore_product_id: string
+  rating: number
   comment?: string
   created_at: string
   updated_at: string
   is_deleted?: boolean
-
-  // ── Fields bổ sung từ frontend (không có trong backend) ─
-  username?: string     
-  full_name?: string        
-  product_name?: string         
-  is_anonymous?: boolean        
-  has_purchased?: boolean       
-  media_urls?: string[]         
+  display_name?: string    
+  avatar_url?: string      
+  // FE-only fields
+  username?: string
+  full_name?: string
+  is_anonymous?: boolean
+  has_purchased?: boolean
+  media_urls?: string[]
 }
 
 // ── Tạo review mới ────────────────────────────────────────
@@ -26,6 +26,7 @@ export interface ReviewCreate {
   firestore_product_id: string  
   rating: number
   comment?: string
+  media_urls?: string[]
 }
 
 // ── Cập nhật review ───────────────────────────────────────
