@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  Search,
   ShoppingBag,
   User,
   Menu,
@@ -21,20 +20,13 @@ const isMenuOpen = ref(false);
 const isUserDropdownOpen = ref(false);
 
 const toggleMenu = () => (isMenuOpen.value = !isMenuOpen.value);
-const toggleUserDropdown = () =>
-  (isUserDropdownOpen.value = !isUserDropdownOpen.value);
+const toggleUserDropdown = () => (isUserDropdownOpen.value = !isUserDropdownOpen.value);
 
-const displayName = computed(() => {
-  return user.value?.full_name || user.value?.email || "User";
-});
+const displayName = computed(() => user.value?.full_name || user.value?.email || "User");
 
-const closeDropdowns = () => {
-  isUserDropdownOpen.value = false;
-};
+const closeDropdowns = () => { isUserDropdownOpen.value = false };
 
-onClickOutside(dropdownRef, () => {
-  isUserDropdownOpen.value = false;
-});
+onClickOutside(dropdownRef, () => { isUserDropdownOpen.value = false });
 
 const isActive = (path: string) => {
   if (path === '/home') return route.path === '/home' || route.path === '/'
@@ -46,17 +38,15 @@ const navLinks = [
   { name: "Sản Phẩm", path: "/shop" },
   { name: "Giới Thiệu", path: "/about" },
   { name: "Liên Hệ", path: "/contact" },
-  { name: "Xem đơn hàng", path: "/order/view_order" },
+  { name: "Đơn hàng", path: "/order/view_order" },
+  { name: "Chatbot", path: "/chatbot" },
   { name: "Phòng thử đồ", path: "/fitting-room" },
   { name: "AR Viewer", path: "/AR-room" },
 ];
 
 const goToCart = () => {
-  if (!isAuthenticated.value) {
-    navigateTo("/auth/login");
-  } else {
-    navigateTo("/cart");
-  }
+  if (!isAuthenticated.value) navigateTo("/auth/login");
+  else navigateTo("/cart");
 };
 </script>
 
@@ -82,14 +72,10 @@ const goToCart = () => {
               : 'text-gray-600 hover:text-glow-primary-600'"
           >
             {{ link.name }}
-
-            <!-- Underline animation -->
             <span
               class="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 bg-glow-primary-500 rounded-full transition-all duration-300"
               :class="isActive(link.path) ? 'w-full' : 'w-0 group-hover:w-full'"
             />
-
-            <!-- Dot indicator -->
             <span
               v-if="isActive(link.path)"
               class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-glow-primary-500"
@@ -97,85 +83,80 @@ const goToCart = () => {
           </NuxtLink>
         </nav>
 
-        <!-- Auth Area -->
-        <div class="hidden md:flex items-center gap-3">
-          <!-- CHƯA LOGIN -->
-          <template v-if="!isAuthenticated">
-            <NuxtLink
-              to="/auth/login"
-              class="text-sm font-semibold text-gray-700 px-3 py-2 rounded-full transition-all duration-200 hover:text-blue-600 hover:bg-blue-50"
-            >
-              Đăng nhập
-            </NuxtLink>
-            <NuxtLink
-              to="/auth/register"
-              class="text-sm font-bold text-white bg-blue-600 px-4 py-2 rounded-full transition-all duration-200 hover:bg-blue-700 hover:-translate-y-px"
-            >
-              Đăng ký
-            </NuxtLink>
-          </template>
+        <!-- Right area: Auth + Cart + Mobile toggle -->
+        <div class="flex items-center gap-3">
 
-          <!-- ĐÃ LOGIN -->
-          <template v-else>
-            <div class="relative" ref="dropdownRef">
-              <button
-                @click="toggleUserDropdown"
-                class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-glow-primary-600 transition-colors p-2 rounded-lg"
+          <!-- Auth (desktop) -->
+          <div class="hidden md:flex items-center gap-3">
+            <template v-if="!isAuthenticated">
+              <NuxtLink
+                to="/auth/login"
+                class="text-sm font-semibold text-gray-700 px-3 py-2 rounded-full transition-all hover:text-blue-600 hover:bg-blue-50"
               >
-                <div class="w-8 h-8 rounded-full bg-glow-primary-50 flex items-center justify-center text-glow-primary-600">
-                  <User class="w-4 h-4" />
-                </div>
-                <span>{{ displayName }}</span>
-                <ChevronDown
-                  class="w-4 h-4 transition-transform duration-200"
-                  :class="{ 'rotate-180': isUserDropdownOpen }"
-                />
-              </button>
+                Đăng nhập
+              </NuxtLink>
+              <NuxtLink
+                to="/auth/register"
+                class="text-sm font-bold text-white bg-blue-600 px-4 py-2 rounded-full transition-all hover:bg-blue-700 hover:-translate-y-px"
+              >
+                Đăng ký
+              </NuxtLink>
+            </template>
 
-              <!-- Dropdown Menu -->
-              <transition
-                enter-active-class="transition duration-200 ease-out"
-                enter-from-class="transform scale-95 opacity-0"
-                enter-to-class="transform scale-100 opacity-100"
-                leave-active-class="transition duration-150 ease-in"
-                leave-from-class="transform scale-100 opacity-100"
-                leave-to-class="transform scale-95 opacity-0"
-              >
-                <div
-                  v-if="isUserDropdownOpen"
-                  class="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg border border-gray-100 py-2 z-[60]"
+            <template v-else>
+              <div class="relative" ref="dropdownRef">
+                <button
+                  @click="toggleUserDropdown"
+                  class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-glow-primary-600 transition-colors p-2 rounded-lg"
                 >
-                  <NuxtLink
-                    to="/profile"
-                    class="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-all duration-200 w-full"
-                    @click="closeDropdowns"
-                  >
-                    <Settings class="w-4 h-4" />
-                    Chỉnh sửa thông tin
-                  </NuxtLink>
-                  <div class="my-1 border-t border-gray-100"></div>
-                  <button
-                    @click="logout(); closeDropdowns();"
-                    class="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200 w-full"
-                  >
-                    <LogOut class="w-4 h-4" />
-                    Đăng xuất
-                  </button>
-                </div>
-              </transition>
-            </div>
-          </template>
-        </div>
+                  <div class="w-8 h-8 rounded-full bg-glow-primary-50 flex items-center justify-center text-glow-primary-600">
+                    <User class="w-4 h-4" />
+                  </div>
+                  <span>{{ displayName }}</span>
+                  <ChevronDown
+                    class="w-4 h-4 transition-transform duration-200"
+                    :class="{ 'rotate-180': isUserDropdownOpen }"
+                  />
+                </button>
 
-        <!-- Icons -->
-        <div class="flex items-center gap-4 text-gray-600">
-          <button class="hover:text-glow-primary-600 transition-colors">
-            <Search class="w-5 h-5" />
-          </button>
+                <transition
+                  enter-active-class="transition duration-200 ease-out"
+                  enter-from-class="transform scale-95 opacity-0"
+                  enter-to-class="transform scale-100 opacity-100"
+                  leave-active-class="transition duration-150 ease-in"
+                  leave-from-class="transform scale-100 opacity-100"
+                  leave-to-class="transform scale-95 opacity-0"
+                >
+                  <div
+                    v-if="isUserDropdownOpen"
+                    class="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg border border-gray-100 py-2 z-[60]"
+                  >
+                    <NuxtLink
+                      to="/profile"
+                      class="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-all w-full"
+                      @click="closeDropdowns"
+                    >
+                      <Settings class="w-4 h-4" />
+                      Chỉnh sửa thông tin
+                    </NuxtLink>
+                    <div class="my-1 border-t border-gray-100"></div>
+                    <button
+                      @click="logout(); closeDropdowns();"
+                      class="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-all w-full"
+                    >
+                      <LogOut class="w-4 h-4" />
+                      Đăng xuất
+                    </button>
+                  </div>
+                </transition>
+              </div>
+            </template>
+          </div>
 
+          <!-- Cart -->
           <button
             @click="goToCart"
-            class="relative hover:text-glow-primary-600 transition-colors"
+            class="relative text-gray-600 hover:text-glow-primary-600 transition-colors"
           >
             <ShoppingBag class="w-5 h-5" />
             <span
@@ -186,14 +167,15 @@ const goToCart = () => {
             </span>
           </button>
 
-          <!-- Mobile Menu Toggle -->
+          <!-- Mobile toggle -->
           <button
             @click="toggleMenu"
-            class="md:hidden hover:text-glow-primary-600 transition-colors"
+            class="md:hidden text-gray-600 hover:text-glow-primary-600 transition-colors"
           >
             <Menu v-if="!isMenuOpen" class="w-6 h-6" />
             <X v-else class="w-6 h-6" />
           </button>
+
         </div>
       </div>
     </div>
@@ -213,7 +195,7 @@ const goToCart = () => {
             v-for="link in navLinks"
             :key="link.path"
             :to="link.path"
-            class="flex items-center gap-3 py-3 px-3 text-base font-medium border-b border-gray-50 last:border-0 transition-all duration-200 rounded-lg"
+            class="flex items-center gap-3 py-3 px-3 text-base font-medium border-b border-gray-50 last:border-0 transition-all rounded-lg"
             :class="isActive(link.path)
               ? 'text-glow-primary-600 font-bold bg-glow-primary-50 border-l-2 border-l-glow-primary-500'
               : 'text-gray-600 hover:text-glow-primary-600 hover:bg-gray-50'"
@@ -226,18 +208,17 @@ const goToCart = () => {
             {{ link.name }}
           </NuxtLink>
 
-          <!-- Mobile Auth -->
           <div class="pt-4">
             <template v-if="!isAuthenticated">
               <NuxtLink
                 to="/auth/login"
-                class="block text-center text-sm font-semibold text-gray-700 px-3 py-2 rounded-full mb-2 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                class="block text-center text-sm font-semibold text-gray-700 px-3 py-2 rounded-full mb-2 hover:text-blue-600 hover:bg-blue-50 transition-all"
               >
                 Đăng nhập
               </NuxtLink>
               <NuxtLink
                 to="/auth/register"
-                class="block text-center text-sm font-bold text-white bg-blue-600 px-4 py-2 rounded-full hover:bg-blue-700 transition-all duration-200"
+                class="block text-center text-sm font-bold text-white bg-blue-600 px-4 py-2 rounded-full hover:bg-blue-700 transition-all"
               >
                 Đăng ký
               </NuxtLink>
@@ -250,7 +231,7 @@ const goToCart = () => {
                 </p>
                 <NuxtLink
                   to="/profile"
-                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-gray-600 rounded-lg transition-all duration-200 active:bg-gray-100 hover:bg-gray-50"
+                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-gray-600 rounded-lg transition-all hover:bg-gray-50"
                   @click="isMenuOpen = false"
                 >
                   <Settings class="w-4 h-4" />
@@ -258,7 +239,7 @@ const goToCart = () => {
                 </NuxtLink>
                 <NuxtLink
                   to="/order/view_order"
-                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-gray-600 rounded-lg transition-all duration-200 active:bg-gray-100 hover:bg-gray-50"
+                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-gray-600 rounded-lg transition-all hover:bg-gray-50"
                   @click="isMenuOpen = false"
                 >
                   <ClipboardList class="w-4 h-4" />
@@ -266,7 +247,7 @@ const goToCart = () => {
                 </NuxtLink>
                 <button
                   @click="logout"
-                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-red-600 rounded-lg mt-2 border-t border-gray-100 pt-3 transition-all duration-200 hover:bg-red-50 w-full"
+                  class="flex items-center gap-3 px-3 py-3 text-base font-medium text-red-600 rounded-lg mt-2 border-t border-gray-100 pt-3 transition-all hover:bg-red-50 w-full"
                 >
                   <LogOut class="w-4 h-4" />
                   Đăng xuất
