@@ -79,6 +79,12 @@ const menuItems = [
     path:"/admin/garments",
     icon: Shirt,
     description:"Quản lý trang phục AR"
+  },
+  {
+    label: "Giới thiệu",
+    path: "/admin/about",
+    icon: Stethoscope,
+    description: "Thông tin về hệ thống"
   }
 ];
 
