@@ -17,7 +17,7 @@ const handleSortChange = (event: Event) => {
 </script>
 
 <template>
-  <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-50 mb-10 gap-4">
+  <div class="flex flex-col sm:flex-row justify-between items-center bg-white  rounded-2xl shadow-sm border border-gray-50">
     <p class="text-gray-500 text-sm italic font-medium">
       Hiển thị <span class="text-gray-900 font-bold not-italic px-1">{{ count }}</span> sản phẩm
     </p>
