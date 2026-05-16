@@ -29,7 +29,6 @@ provide('showToast', showToast)
 
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Thiết lập tài khoản</h1>
-        <p class="mt-1 text-gray-500 text-sm">Quản lý hồ sơ và địa chỉ giao hàng</p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
