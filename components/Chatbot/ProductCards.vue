@@ -5,6 +5,14 @@
       :key="product.id"
       class="min-w-[170px] bg-white rounded-2xl shadow-sm border border-glow-primary-100 p-3 text-xs transition-all hover:shadow-md"
     >
+      <!-- Ảnh sản phẩm -->
+      <img
+        v-if="product.images[0]"
+        :src="product.images[0]"
+        :alt="product.name"
+        class="w-full h-24 object-cover rounded-xl"
+      />
+
       <div class="mt-2 font-bold text-gray-900 line-clamp-2 leading-snug">
         {{ product.name }}
       </div>
@@ -27,6 +35,16 @@
   </div>
 </template>
 
+<script setup lang="ts">
+import type { ChatProduct } from '@/types';
+
+defineProps<{
+  products: ChatProduct[];
+}>();
+
+const formatPrice = (price: number) => price.toLocaleString('vi-VN');
+</script>
+
 <style scoped>
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -36,16 +54,3 @@
   scrollbar-width: none;
 }
 </style>
-
-<script setup lang="ts">
-import type { Product } from '@/composables/useChatbot';
-
-defineProps<{
-  products: Product[];
-}>();
-
-
-
-const formatPrice = (price: number) =>
-  price.toLocaleString('vi-VN');
-</script>
