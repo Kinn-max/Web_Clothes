@@ -92,7 +92,7 @@ const filteredProducts = computed(() =>
 
 <template>
   <div class="min-h-screen bg-glow-bg font-sans text-gray-900">
-    <ShopHero title="Bộ Sưu Tập" />
+    <!-- <ShopHero title="Bộ Sưu Tập" /> -->
 
     <div class="container mx-auto px-4 pb-24">
       <div class="flex flex-col lg:flex-row gap-12">
@@ -109,7 +109,7 @@ const filteredProducts = computed(() =>
         <main class="flex-1">
           <ShopToolbar :count="filteredProducts.length" v-model:sortBy="sortBy" />
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12">
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             <ProductCard
               v-for="product in filteredProducts"
               :key="product.id"
