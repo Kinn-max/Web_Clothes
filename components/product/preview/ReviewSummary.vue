@@ -15,7 +15,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="bg-gradient-to-br from-pink-50 via-white to-pink-50/50 border border-pink-100 rounded-3xl p-8 mb-8 shadow-sm">
+  <div class="bg-gradient-to-br from-pink-50 via-white to-pink-50/50 border border-pink-100 rounded-3xl p-2 mb-2 shadow-sm">
     <div class="flex flex-col md:flex-row items-center gap-8">
 
       <!-- Average -->
