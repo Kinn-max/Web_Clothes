@@ -4,9 +4,7 @@
       <label class="block text-gray-700 font-medium mb-2">
          Chọn vị trí trên bản đồ
       </label>
-      <p class="text-sm text-gray-500 mb-2">
-        Click vào bản đồ để chọn vị trí chính xác của bạn
-      </p>
+     
       
       <!-- Search Address -->
       <div class="flex gap-2 mb-3">

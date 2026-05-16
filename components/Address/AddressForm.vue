@@ -131,10 +131,10 @@ const typeClass: Record<string, string> = {
       <div v-if="isOpen"
         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
         @click.self="handleClose">
-        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[100vh] overflow-y-auto shadow-2xl">
 
           <!-- Header -->
-          <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center rounded-t-2xl z-10">
+          <div class="sticky top-0 bg-white border-b border-gray-100 p-2 flex justify-between items-center rounded-t-2xl z-10">
             <h2 class="text-lg font-bold text-gray-900">
               {{ isEditMode ? 'Chỉnh sửa địa chỉ' : 'Thêm địa chỉ mới' }}
             </h2>
@@ -146,28 +146,29 @@ const typeClass: Record<string, string> = {
           </div>
 
           <!-- Form -->
-          <form @submit.prevent="handleSubmit" class="p-6 space-y-5">
+          <form @submit.prevent="handleSubmit" class="p-2">
 
             <!-- Họ tên -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                Họ và tên người nhận <span class="text-red-500">*</span>
-              </label>
-              <input v-model="formData.full_name" type="text" required
-                placeholder="Nguyễn Văn A"
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-
-            <!-- SĐT -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                Số điện thoại <span class="text-red-500">*</span>
-              </label>
-              <input v-model="formData.phone" type="tel" required @input="validatePhone"
-                placeholder="0912345678"
-                class="w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                :class="phoneError ? 'border-red-400' : 'border-gray-300'" />
-              <p v-if="phoneError" class="text-red-500 text-xs mt-1">{{ phoneError }}</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                  Họ và tên người nhận <span class="text-red-500">*</span>
+                </label>
+                <input v-model="formData.full_name" type="text" required
+                  placeholder="Nguyễn Văn A"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <!-- SĐT -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                  Số điện thoại <span class="text-red-500">*</span>
+                </label>
+                <input v-model="formData.phone" type="tel" required @input="validatePhone"
+                  placeholder="0912345678"
+                  class="w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  :class="phoneError ? 'border-red-400' : 'border-gray-300'" />
+                <p v-if="phoneError" class="text-red-500 text-xs mt-1">{{ phoneError }}</p>
+              </div>
             </div>
 
             <!-- Loại địa chỉ -->
