@@ -18,18 +18,18 @@ export const useReview = () => {
     })
 
   const useProductReviews = (
-    firestoreProductId: Ref<string>,
-    page = ref(1),
-    limit = ref(5)
-  ) =>
-    useQuery({
-      queryKey: ['reviews', 'product', firestoreProductId, page, limit] as const,
-      queryFn: () =>
-        http.get<PaginatedResponse<Review>>(
-          `/reviews/product/${firestoreProductId.value}?page=${page.value}&limit=${limit.value}`
-        ),
-      enabled: computed(() => !!firestoreProductId.value),
-    })
+  firestoreProductId: Ref<string>,
+  page = ref(1),
+  limit = ref(5)
+) =>
+  useQuery({
+    queryKey: ['reviews', 'product', firestoreProductId, page, limit] as const,
+    queryFn: () =>
+      http.get<Review[]>(
+        `/reviews/product/${firestoreProductId.value}?page=${page.value}&limit=${limit.value}`
+      ),
+    enabled: computed(() => !!firestoreProductId.value),
+  });
 
   const useReviewById = (id: Ref<number>) =>
     useQuery({
@@ -39,46 +39,54 @@ export const useReview = () => {
     })
 
   const useAverageRating = (firestoreProductId: Ref<string>) =>
-    useQuery({
-      queryKey: ['reviews', 'rating', firestoreProductId] as const,
-      queryFn: () =>
-        http.get<ReviewStats>(`/reviews/stats/${firestoreProductId.value}`),
-      enabled: computed(() => !!firestoreProductId.value),
-      staleTime: 1000 * 60 * 10,
-    })
+  useQuery({
+    queryKey: ['reviews', 'rating', firestoreProductId] as const,
+    queryFn: () =>
+      http.get<ReviewStats>(
+        `/reviews/product/${firestoreProductId.value}/stats`
+      ),
+    enabled: computed(() => !!firestoreProductId.value),
+    staleTime: 1000 * 60 * 5,
+  });
 
   const useCheckUserPurchased = (firestoreProductId: Ref<string>) =>
-    useQuery({
-      queryKey: ['reviews', 'check-purchase', firestoreProductId] as const,
-      queryFn: async () => {
-        try {
-          const res = await http.get<{ hasPurchased: boolean }>(
-            `/reviews/check-purchase/${firestoreProductId.value}`
-          )
-          return res.hasPurchased ?? false
-        } catch {
-          return false
-        }
-      },
-      enabled: computed(() => !!firestoreProductId.value && !!authStore.userId),
-    })
+  useQuery({
+    queryKey: ['reviews', 'check-purchase', firestoreProductId] as const,
+    queryFn: async () => {
+      try {
+        const neonId = authStore.neonId;
+        if (!neonId) return false;
+        const res = await http.get<{ hasPurchased: boolean }>(
+          `/reviews/check-purchase/${firestoreProductId.value}?user_id=${neonId}`
+        );
+        return res.hasPurchased ?? false;
+      } catch {
+        return false;
+      }
+    },
+    enabled: computed(() => !!firestoreProductId.value && !!authStore.neonId),
+  });
 
   // ─── Mutations ─────────────────────────────────────────────
 
   const useCreateReview = () =>
-    useMutation({
-      mutationFn: (data: ReviewCreate): Promise<Review> =>
-        http.post<Review>('/reviews', data),
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({
-          queryKey: ['reviews', 'product', variables.firestore_product_id],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['reviews', 'rating', variables.firestore_product_id],
-        })
-      },
-    })
-
+  useMutation({
+    mutationFn: (data: ReviewCreate): Promise<Review> =>
+      http.post<Review>('/reviews', data),
+    onSuccess: (_, variables) => {
+      // Invalidate tất cả queries liên quan đến product này
+      queryClient.invalidateQueries({
+        queryKey: ['reviews', 'product', ref(variables.firestore_product_id)],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['reviews', 'rating', ref(variables.firestore_product_id)],
+      })
+      // Invalidate toàn bộ reviews queries để chắc ăn
+      queryClient.invalidateQueries({
+        queryKey: ['reviews'],
+      })
+    },
+  })
   const useUpdateReview = () =>
     useMutation({
       mutationFn: ({
