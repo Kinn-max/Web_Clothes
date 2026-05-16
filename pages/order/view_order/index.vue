@@ -6,20 +6,23 @@ import { useNotification } from "@/composables/useNotification";
 import BaseConfirmModal from "@/components/modal/BaseConfirmModal.vue";
 import OrderStatusTabs from "@/components/order/OrderStatusTabs.vue";
 import OrderHistoryCard from "@/components/order/OrderHistoryCard.vue";
-import { Package, ShoppingBag, X } from "lucide-vue-next";
+import { Package, X } from "lucide-vue-next";
 import type { Order } from "@/types/order";
 
 const { orders, loading, error, fetchUserOrders, cancelOrder } = useOrder();
 const { user, isAuthenticated } = useAuth();
 const { showNotification } = useNotification();
 
-// ─── Modal hủy đơn ────────────────────────────────────────────────────────────
 const showCancelModal = ref(false);
 const orderToCancel   = ref<string | null>(null);
 const cancellingOrder = ref(false);
+const activeStatus    = ref("all");
+const paying          = ref(false);
 
-// ─── Filter tabs ──────────────────────────────────────────────────────────────
-const activeStatus = ref("all");
+// Phân trang
+const currentPage  = ref(1);
+const pageSize     = ref(5);
+
 const statusTabs = [
   { label: "Tất cả",        value: "all" },
   { label: "Chờ xác nhận", value: "pending" },
@@ -29,22 +32,39 @@ const statusTabs = [
   { label: "Đã hủy",       value: "cancelled" },
 ];
 
+// Đếm số đơn theo từng status
+const statusCounts = computed(() => {
+  const counts: Record<string, number> = { all: orders.value.length }
+  statusTabs.forEach(tab => {
+    if (tab.value !== 'all') {
+      counts[tab.value] = orders.value.filter(
+        o => o.status.toLowerCase() === tab.value
+      ).length
+    }
+  })
+  return counts
+})
+
 const filteredOrders = computed(() => {
   if (activeStatus.value === "all") return orders.value;
-  return orders.value.filter(
-    (o) => o.status.toLowerCase() === activeStatus.value
-  );
+  return orders.value.filter(o => o.status.toLowerCase() === activeStatus.value);
 });
 
+const totalPages = computed(() => Math.ceil(filteredOrders.value.length / pageSize.value))
+
+const paginatedOrders = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredOrders.value.slice(start, start + pageSize.value)
+})
+
+// Reset trang khi đổi tab
+watch(activeStatus, () => { currentPage.value = 1 })
 
 onMounted(async () => {
-
-
   if (user.value?.userId) {
     await fetchUserOrders(user.value.userId);
   }
 });
-
 
 const handleCancelOrder = (orderId: string) => {
   orderToCancel.value  = orderId;
@@ -66,26 +86,17 @@ const confirmCancelOrder = async () => {
   }
 };
 
-// ─── Thanh toán ───────────────────────────────────────────────────────────────
-const paying = ref(false);
-
 const handlePayNow = async (order: Order) => {
   paying.value = true;
   try {
-    // TODO: tích hợp cổng thanh toán (VNPay, Stripe, …)
     showNotification("Thông báo", "Tính năng thanh toán online đang được tích hợp.", "info");
-  } catch (err: any) {
-    showNotification("Lỗi", err.message || "Không thể tiến hành thanh toán.", "error");
   } finally {
     paying.value = false;
   }
 };
 
-// ─── Retry ────────────────────────────────────────────────────────────────────
 const handleRetry = async () => {
-  if (user.value?.userId) {
-    await fetchUserOrders(user.value.userId);
-  }
+  if (user.value?.userId) await fetchUserOrders(user.value.userId);
 };
 </script>
 
@@ -93,79 +104,46 @@ const handleRetry = async () => {
   <div class="min-h-screen bg-gray-50 py-12">
     <div class="container mx-auto px-4 max-w-4xl">
 
-      <!-- Tiêu đề -->
-      <div class="flex items-center justify-between mb-8">
-        <h1 class="text-3xl font-serif font-bold text-gray-900">Đơn hàng của tôi</h1>
-        <NuxtLink
-          to="/shop"
-          class="flex items-center gap-2 text-glow-primary-600 hover:text-glow-primary-700 font-medium transition-colors"
-        >
-          <ShoppingBag class="w-5 h-5" />
-          Tiếp tục mua sắm
-        </NuxtLink>
-      </div>
-
-      <!-- Tabs -->
+      <!-- Tabs với số lượng -->
       <OrderStatusTabs
         v-model:activeStatus="activeStatus"
         :statusTabs="statusTabs"
+        :statusCounts="statusCounts"
       />
 
       <!-- Loading -->
-      <div
-        v-if="loading"
-        class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100"
-      >
+      <div v-if="loading" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100">
         <div class="w-12 h-12 border-4 border-gray-100 border-t-glow-primary-600 rounded-full animate-spin mb-4"></div>
         <p class="text-gray-500 font-medium">Đang tải danh sách đơn hàng...</p>
       </div>
 
       <!-- Error -->
-      <div
-        v-else-if="error"
-        class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 text-center"
-      >
+      <div v-else-if="error" class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 text-center">
         <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
           <X class="w-8 h-8" />
         </div>
         <h3 class="text-xl font-bold text-gray-900 mb-2">Đã có lỗi xảy ra</h3>
         <p class="text-gray-600 mb-6">{{ error }}</p>
-        <button
-          @click="handleRetry"
-          class="px-6 py-2 bg-glow-primary-600 text-white rounded-lg hover:bg-glow-primary-700 transition-colors"
-        >
+        <button @click="handleRetry" class="px-6 py-2 bg-glow-primary-600 text-white rounded-lg hover:bg-glow-primary-700 transition-colors">
           Thử lại
         </button>
       </div>
 
-      <!-- Không có đơn hàng -->
-      <div
-        v-else-if="filteredOrders.length === 0"
-        class="p-12 bg-white rounded-2xl shadow-sm border border-gray-100 text-center"
-      >
+      <!-- Empty -->
+      <div v-else-if="filteredOrders.length === 0" class="p-12 bg-white rounded-2xl shadow-sm border border-gray-100 text-center">
         <div class="w-20 h-20 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-6">
           <Package class="w-10 h-10" />
         </div>
         <h3 class="text-2xl font-bold text-gray-900 mb-2">Không tìm thấy đơn hàng</h3>
         <p class="text-gray-600 mb-8 max-w-md mx-auto">
-          {{
-            activeStatus === "all"
-              ? "Bạn chưa thực hiện đơn hàng nào."
-              : "Không có đơn hàng nào ở trạng thái này."
-          }}
+          {{ activeStatus === "all" ? "Bạn chưa thực hiện đơn hàng nào." : "Không có đơn hàng nào ở trạng thái này." }}
         </p>
-        <NuxtLink
-          v-if="activeStatus === 'all'"
-          to="/shop"
-          class="inline-flex items-center px-8 py-3 bg-glow-primary-600 text-white font-bold rounded-xl hover:bg-glow-primary-700 transition-all hover:shadow-lg active:scale-95"
-        >
+        <NuxtLink v-if="activeStatus === 'all'" to="/shop"
+          class="inline-flex items-center px-8 py-3 bg-glow-primary-600 text-white font-bold rounded-xl hover:bg-glow-primary-700 transition-all">
           Mua sắm ngay
         </NuxtLink>
-        <button
-          v-else
-          @click="activeStatus = 'all'"
-          class="inline-flex items-center px-8 py-3 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95"
-        >
+        <button v-else @click="activeStatus = 'all'"
+          class="inline-flex items-center px-8 py-3 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all">
           Xem tất cả đơn hàng
         </button>
       </div>
@@ -173,16 +151,52 @@ const handleRetry = async () => {
       <!-- Danh sách -->
       <div v-else class="space-y-6">
         <OrderHistoryCard
-          v-for="order in filteredOrders"
+          v-for="order in paginatedOrders"
           :key="order.id"
           :order="order"
           :paying="paying"
           @cancel="handleCancelOrder"
           @pay="handlePayNow"
         />
+
+        <!-- Phân trang -->
+        <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 pt-4">
+          <button
+            @click="currentPage--"
+            :disabled="currentPage === 1"
+            class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 bg-white hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ← Trước
+          </button>
+
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            @click="currentPage = page"
+            class="w-10 h-10 rounded-xl text-sm font-bold transition-all"
+            :class="currentPage === page
+              ? 'bg-glow-primary-600 text-white shadow-md'
+              : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'"
+          >
+            {{ page }}
+          </button>
+
+          <button
+            @click="currentPage++"
+            :disabled="currentPage === totalPages"
+            class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 bg-white hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Tiếp →
+          </button>
+        </div>
+
+        <!-- Info phân trang -->
+        <p class="text-center text-sm text-gray-400">
+          Hiển thị {{ (currentPage - 1) * pageSize + 1 }}–{{ Math.min(currentPage * pageSize, filteredOrders.length) }}
+          / {{ filteredOrders.length }} đơn hàng
+        </p>
       </div>
 
-      <!-- Modal xác nhận hủy -->
       <BaseConfirmModal
         :show="showCancelModal"
         title="Xác nhận hủy đơn hàng"
@@ -197,9 +211,3 @@ const handleRetry = async () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.font-serif {
-  font-family: "Playfair Display", serif;
-}
-</style>
