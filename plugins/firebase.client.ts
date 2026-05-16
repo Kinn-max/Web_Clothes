@@ -37,10 +37,20 @@ export default defineNuxtPlugin(async () => {
         const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid))
 
         if (userSnap.exists()) {
-          //  setAuth tự lo lưu token vào localStorage
+          // Lấy numeric id từ backend bằng firebase_uid
+          let neonId: number | undefined;
+          try {
+            const res = await $fetch<{ id: number }>(
+              `${config.public.apiBaseUrl}/users/by-firebase-uid/${firebaseUser.uid}`,
+              { headers: { Authorization: `Bearer ${idToken}` ,'ngrok-skip-browser-warning': 'true',} }
+            );
+            neonId = res.id;
+          } catch {}
+
           authStore.setAuth(
             {
               userId: firebaseUser.uid,
+              neonId,
               ...userSnap.data(),
             },
             idToken
