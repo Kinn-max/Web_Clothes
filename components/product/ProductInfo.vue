@@ -6,6 +6,7 @@ const props = defineProps<{
   quantity: number;
   addingToCart: boolean;
   reviewsCount: number;
+  avgRating: number;
 }>();
 
 const emit = defineEmits<{
@@ -32,23 +33,13 @@ const decreaseQty = () => {
 const handleQuantityInput = (event: Event) => {
   const input = event.target as HTMLInputElement;
   let value = parseInt(input.value) || 1;
-  
-  // Validate: minimum is 1
-  if (value < 1) {
-    value = 1;
-  }
-  
-  // Validate: maximum is available stock
-  if (props.product && value > props.product.quantity) {
-    value = props.product.quantity;
-  }
-  
+  if (value < 1) value = 1;
+  if (props.product && value > props.product.quantity) value = props.product.quantity;
   emit("update:quantity", value);
 };
 
 const handleQuantityBlur = (event: Event) => {
   const input = event.target as HTMLInputElement;
-  // If empty or invalid, reset to 1
   if (!input.value || parseInt(input.value) < 1) {
     emit("update:quantity", 1);
   }
@@ -66,11 +57,16 @@ const handleQuantityBlur = (event: Event) => {
 
     <div class="flex items-center gap-3 mb-6 text-sm">
       <div class="flex text-yellow-400">
-        <Star v-for="n in 5" :key="n" class="w-4 h-4 fill-current" />
+        <Star
+          v-for="n in 5" :key="n"
+          class="w-4 h-4"
+          :class="n <= Math.round(avgRating) ? 'fill-current' : 'text-gray-300 fill-current'"
+        />
       </div>
-      <span class="text-gray-600">({{ reviewsCount }} đánh giá)</span>
-      <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-      <span class="text-gray-600">Đã bán 1.2k</span>
+      <span class="text-gray-600">
+        {{ avgRating > 0 ? Number(avgRating).toFixed(1) : 'Chưa có' }}
+        ({{ reviewsCount }} đánh giá)
+      </span>
     </div>
 
     <div class="bg-gradient-to-br from-glow-primary-50 via-white to-glow-primary-50/50 p-5 rounded-2xl mb-6 border border-glow-primary-100 shadow-sm">
@@ -86,23 +82,23 @@ const handleQuantityBlur = (event: Event) => {
     <!-- Actions -->
     <div class="flex items-center gap-3 mb-8">
       <div class="flex items-center border-2 border-gray-200 rounded-xl overflow-hidden bg-white">
-        <button 
+        <button
           @click="decreaseQty"
           :disabled="quantity <= 1"
           class="w-11 h-12 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Minus class="w-4 h-4 text-gray-700" />
         </button>
-        <input 
+        <input
           type="number"
-          :value="quantity" 
+          :value="quantity"
           @input="handleQuantityInput"
           @blur="handleQuantityBlur"
           min="1"
           :max="product.quantity"
           class="w-14 h-12 text-center font-bold text-gray-900 border-x-2 border-gray-200 outline-none bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
-        <button 
+        <button
           @click="increaseQty"
           class="w-11 h-12 flex items-center justify-center hover:bg-gray-50 transition-colors"
         >
@@ -110,7 +106,7 @@ const handleQuantityBlur = (event: Event) => {
         </button>
       </div>
 
-      <button 
+      <button
         @click="emit('addToCart')"
         :disabled="addingToCart"
         class="flex-1 h-12 bg-gray-900 text-white rounded-xl font-bold text-sm tracking-wide shadow-lg hover:bg-glow-primary-600 hover:shadow-xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -120,14 +116,13 @@ const handleQuantityBlur = (event: Event) => {
         <span>{{ addingToCart ? 'Đang thêm...' : 'Thêm vào giỏ' }}</span>
       </button>
 
-      <button 
+      <button
         @click="emit('toggleWishlist')"
         class="w-12 h-12 border-2 border-gray-200 rounded-xl flex items-center justify-center hover:border-glow-primary-500 hover:text-glow-primary-600 hover:bg-glow-primary-50 transition-all duration-300 active:scale-95 group"
       >
         <Heart class="w-5 h-5 group-hover:fill-current" />
       </button>
     </div>
-
 
     <!-- Policies -->
     <div class="space-y-3 pt-6 border-t border-gray-100">
