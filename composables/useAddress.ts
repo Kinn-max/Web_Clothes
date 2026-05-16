@@ -6,27 +6,26 @@ export const useAddress = () => {
   const http = useHttp()
   const queryClient = useQueryClient()
 
-  const { requireUserIdInt, userId } = useRequireAuth()
+  const { requireNeonId, neonId } = useRequireAuth()
 
-  // Base path — gọi requireUserIdInt() lúc runtime
   // nếu chưa login → tự throw → TanStack bắt lỗi
-  const basePath = () => `/users/${requireUserIdInt()}/addresses`
+  const basePath = () => `/users/${requireNeonId()}/addresses`
 
   // ─── GET tất cả addresses ──────────────────────────────────
   const useGetAllAddresses = () =>
     useQuery({
-      queryKey: ['addresses', userId],         
+      queryKey: ['addresses', neonId],         
       queryFn: () => http.get<Address[]>(basePath()),
-      enabled: computed(() => !!userId.value), 
+    enabled: computed(() => !!neonId.value && neonId.value !== null),
     })
 
   // ─── GET 1 address theo id ─────────────────────────────────
   const useGetAddressById = (addressId: Ref<number>) =>
     useQuery({
-      queryKey: ['addresses', userId, addressId],
+      queryKey: ['addresses', neonId, addressId],
       queryFn: () =>
         http.get<Address>(`${basePath()}/${addressId.value}`),
-      enabled: computed(() => !!userId.value && !!addressId.value),
+      enabled: computed(() => !!neonId.value && !!addressId.value),
     })
 
   // ─── POST tạo address mới ──────────────────────────────────
@@ -36,7 +35,7 @@ export const useAddress = () => {
         http.post<Address>(basePath(), data),
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['addresses', userId],
+          queryKey: ['addresses', neonId],
         })
       },
     })
@@ -53,7 +52,7 @@ export const useAddress = () => {
       }) => http.put<Address>(`${basePath()}/${addressId}`, data),
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['addresses', userId],
+          queryKey: ['addresses', neonId],
         })
       },
     })
@@ -65,7 +64,7 @@ export const useAddress = () => {
         http.del<void>(`${basePath()}/${addressId}`),
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['addresses', userId],
+          queryKey: ['addresses', neonId],
         })
       },
     })
@@ -77,7 +76,7 @@ export const useAddress = () => {
         http.patch<Address>(`${basePath()}/${addressId}/set-default`, {}),
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['addresses', userId],
+          queryKey: ['addresses', neonId],
         })
       },
     })
