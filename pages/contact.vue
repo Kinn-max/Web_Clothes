@@ -10,7 +10,6 @@ const form = ref({
 const errors    = ref({} as Record<string, string>);
 const submitting = ref(false);
 
-// ✅ Fix: dùng useGetAllStores() thay vì getAllStores + loading
 const { useGetAllStores } = useStore();
 const { data: storesData, isLoading } = useGetAllStores()
 
