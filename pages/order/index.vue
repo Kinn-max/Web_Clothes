@@ -3,10 +3,8 @@ import { ref, computed, onMounted } from "vue";
 import { ArrowLeft } from "lucide-vue-next";
 import { useRoute } from "vue-router";
 import {
-  doc,
   collection,
   addDoc,
-  getDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { useCart } from "@/composables/useCart";
@@ -14,36 +12,22 @@ import ShippingAddress from "@/components/order/ShippingAddress.vue";
 import PaymentMethod from "@/components/order/PaymentMethod.vue";
 import OrderSummary from "@/components/order/OrderSummary.vue";
 import VoucherSelector from "@/components/order/VoucherSelector.vue";
+import type { Voucher } from "@/types/voucher";
+import type { ContactInfo } from "@/types/contact";
+import { usePayment } from "@/composables/usePayment";
 
-interface ContactInfo {
-  fullName: string;
-  phone: string;
-  address: string;
-}
-
-interface Voucher {
-  id: string;
-  code: string;
-  discount_type: "percent" | "fixed";
-  discount_value: number;
-  min_order_value: number;
-  max_discount: number | null;
-  quantity: number;
-  start_date: string;
-  end_date: string;
-  status: string;
-}
+const { useCreatePayment } = usePayment()
+const { mutateAsync: createPayment } = useCreatePayment()
 
 const route = useRoute();
 const { showNotification } = useNotification();
-const { isAuthenticated, user } = useAuth();
+const { user } = useAuth();
 const { cart, removeMultiItems } = useCart();
 
 const nuxtApp = useNuxtApp();
 const db = nuxtApp.$db as import("firebase/firestore").Firestore;
 
 const IMAGE_BASE_URL = "http://localhost:8081/uploads/products";
-
 
 const selectedPaymentMethod = ref("COD");
 const contactInfo = ref<ContactInfo>({ fullName: "", phone: "", address: "" });
@@ -56,7 +40,6 @@ const selectedItemIds = computed<string[]>(() => {
   if (!param) return [];
   return param.split(",");
 });
-
 
 const selectedItems = computed(() => {
   if (!cart.value?.items) return [];
@@ -89,38 +72,14 @@ const isContactInfoValid = computed(() =>
   contactInfo.value.address
 );
 
-
-onMounted(async () => {
-  if (!isAuthenticated.value) {
-    navigateTo("/auth/login");
-    return;
-  }
-
+onMounted(() => {
   if (selectedItemIds.value.length === 0) {
     showNotification("Thông báo", "Vui lòng chọn sản phẩm từ giỏ hàng.", "warning");
     navigateTo("/cart");
-    return;
-  }
-
-
-  if (user.value?.userId) {
-    try {
-      const snap = await getDoc(doc(db, "users", user.value.userId));
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data?.contactInfo) {
-          contactInfo.value = data.contactInfo as ContactInfo;
-          hasContactInfo.value = true;
-        }
-      }
-    } catch (err) {
-      console.error("[checkout] load contactInfo:", err);
-    }
   }
 });
 
 const handleEditContactInfo = () => (hasContactInfo.value = false);
-
 
 const handlePlaceOrder = async () => {
   if (!isContactInfoValid.value) {
@@ -154,13 +113,19 @@ const handlePlaceOrder = async () => {
     };
 
     const orderRef = await addDoc(collection(db, "orders"), orderData);
-    console.log("[checkout] Order created:", orderRef.id);
 
-    showNotification("Thành công", "Đặt hàng thành công! Cảm ơn bạn đã mua hàng.", "success");
-
-    await removeMultiItems(selectedItemIds.value);
-
-    navigateTo(`/order/success?id=${orderRef.id}`);
+    if (selectedPaymentMethod.value === 'Banking') {
+      showNotification('Thông báo', 'Đang chuyển đến Stripe...', 'info');
+      await createPayment({
+        order_id: orderRef.id,
+        amount: total.value,
+        order_desc: `Thanh toan GlowUp #${orderRef.id.slice(0, 8)}`,
+      });
+    } else {
+      await removeMultiItems(selectedItemIds.value);
+      showNotification('Thành công', 'Đặt hàng thành công!', 'success');
+      navigateTo(`/order/success?id=${orderRef.id}`);
+    }
   } catch (error: any) {
     console.error("[checkout] handlePlaceOrder:", error);
     showNotification("Lỗi", "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.", "error");

@@ -17,11 +17,11 @@ const paymentMethods = [
     icon: Wallet,
   },
   {
-    id: "Banking",
-    name: "Chuyển khoản ngân hàng",
-    description: "Chuyển khoản qua tài khoản ngân hàng",
-    icon: Building2,
-  }
+  id: "Banking",
+  name: "Thanh toán qua Stripe",
+  description: "Thanh toán trực tuyến qua Stripe (ATM, Visa, QR Code)",
+  icon: CreditCard,
+}
 ];
 </script>
 

@@ -8,7 +8,8 @@ import OrderStatusTabs from "@/components/order/OrderStatusTabs.vue";
 import OrderHistoryCard from "@/components/order/OrderHistoryCard.vue";
 import { Package, X } from "lucide-vue-next";
 import type { Order } from "@/types/order";
-
+const { useCreatePayment } = usePayment()
+const { mutateAsync: createPayment } = useCreatePayment()
 const { orders, loading, error, fetchUserOrders, cancelOrder } = useOrder();
 const { user, isAuthenticated } = useAuth();
 const { showNotification } = useNotification();
@@ -87,13 +88,21 @@ const confirmCancelOrder = async () => {
 };
 
 const handlePayNow = async (order: Order) => {
-  paying.value = true;
+  paying.value = true
   try {
-    showNotification("Thông báo", "Tính năng thanh toán online đang được tích hợp.", "info");
+    showNotification('Thông báo', 'Đang chuyển đến Stripe...', 'info')
+    await createPayment({
+      order_id: order.id,
+      amount: order.totalPrice,
+      order_desc: `Thanh toan GlowUp #${order.id.slice(0, 8)}`,
+    })
+    // onSuccess tự redirect sang Stripe
+  } catch (err) {
+    showNotification('Lỗi', 'Không thể tạo thanh toán. Vui lòng thử lại.', 'error')
   } finally {
-    paying.value = false;
+    paying.value = false
   }
-};
+}
 
 const handleRetry = async () => {
   if (user.value?.userId) await fetchUserOrders(user.value.userId);
