@@ -30,5 +30,6 @@ export interface Order {
   shippingAddress: ShippingAddress;
   voucherId?: string;
   voucherCode?: string;
-  createdAt: any;       
+  createdAt: any;  
+  vnpayTransactionNo?: string     
 }
