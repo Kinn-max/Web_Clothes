@@ -11,7 +11,8 @@ import {
   Package,
   Ship,
   Store,
-   Shirt
+   Shirt,
+   CreditCard
   
 } from "lucide-vue-next";
 import { icon } from "leaflet";
@@ -85,7 +86,13 @@ const menuItems = [
     path: "/admin/about",
     icon: Stethoscope,
     description: "Thông tin về hệ thống"
-  }
+  },
+  {
+  label: "Thanh toán",
+  path: "/admin/payments",
+  icon: CreditCard,
+  description: "Giao dịch Stripe",
+},
 ];
 
 const isActive = (path: string) => route.path.startsWith(path);

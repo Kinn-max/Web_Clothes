@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { useOrder } from "../../composables/useOrder";
 import { useProduct } from "@/composables/useProduct";
 import { useUsers } from "../../composables/useUser";
-
+import StripePaymentPanel from "@/components/admin/Payment/StripePaymentPanel.vue";
 definePageMeta({
   layout: "admin",
 });
@@ -290,6 +290,8 @@ const paymentMethodLabel = (m?: string) => {
         </div>
       </div>
     </div>
+    <StripePaymentPanel class="mt-8" />
+
   </div>
 </template>
 
